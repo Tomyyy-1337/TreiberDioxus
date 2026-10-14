@@ -4,9 +4,8 @@ use crate::frontend::router::Route;
 
 #[component]
 pub fn SettingsWrapper(
-    title: String,
-    description: String,
-    settings_page: Route,
+    title: &'static str,
+    description: &'static str,
     children: Element,
 ) -> Element {
     rsx! {
@@ -28,7 +27,7 @@ pub fn SettingsWrapper(
                     }
                 }
                 Link {
-                    to: settings_page,
+                    to: Route::Einstellungen {},
                     class: "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border bg-card text-3xl font-medium leading-none text-muted-foreground",
                     "×"
                 }

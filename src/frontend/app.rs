@@ -1,34 +1,62 @@
-use dioxus::fullstack::{WebSocketOptions, use_websocket};
+use std::time::Duration;
+
+use dioxus::CapturedError;
+use dioxus::fullstack::{CborEncoding, WebSocketOptions, Websocket, use_websocket};
 use dioxus::prelude::*;
 use dioxus_sdk::storage::{SessionStorage, use_storage};
 
 use crate::backend::battery::BatteryState;
-use crate::backend::socket::{ServerMessage, websocket_handler};
+use crate::backend::socket::{ServerMessage, health, websocket_handler};
 
 use super::theme::*;
 use super::router::Route;
-use super::battery_indicator::BatteryIndicator;
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 pub static BATTERY_STATE: GlobalSignal<Option<BatteryState>> = GlobalSignal::new(|| None);
 pub static GPS_COUNT: GlobalSignal<Option<u8>> = GlobalSignal::new(|| None);
+pub static WEBSOCKET_DISCONNECTED: GlobalSignal<bool> = GlobalSignal::new(|| false);
+
+fn handle_websocket_message(message: ServerMessage) {
+    match message {
+        ServerMessage::BatteryUpdate(battery) => {
+            *BATTERY_STATE.write() = Some(battery);
+        }
+        ServerMessage::GpsCountUpdate(gps_count) => {
+            *GPS_COUNT.write() = Some(gps_count.count);
+        }
+    }
+}
 
 #[component]
 pub fn App() -> Element {
     let theme = use_storage::<SessionStorage, _>(String::from("theme"), || Theme::Dark);
     let theme = use_context_provider(|| theme);
 
-    let mut socket = use_websocket(|| websocket_handler(WebSocketOptions::new()));
+    let mut socket = use_websocket(|| connect_websocket());
     use_future(move || async move {
-        while let Ok(msg) = socket.recv().await {
-            match msg {
-                ServerMessage::BatteryUpdate(batery) => {
-                    *BATTERY_STATE.write() = Some(batery);
-                }
-                ServerMessage::GpsCountUpdate(gps_count) => {
-                    *GPS_COUNT.write() = Some(gps_count.count);
+        loop {
+            match socket.recv().await {
+                Ok(message) => handle_websocket_message(message),
+                Err(_) => {
+                    if !socket.is_closed() {
+                        continue;
+                    }
+                    *WEBSOCKET_DISCONNECTED.write() = true;
+                    loop {
+                        let result = connect_websocket().await;
+                        let connected = result.is_ok();
+                        socket.set(result);
+                        if connected {
+                            break;
+                        }
+                        #[cfg(feature = "web")]
+                        wasmtimer::tokio::sleep(WS_RETRY_DELAY).await;
+                        #[cfg(not(feature = "web"))]
+                        tokio::time::sleep(WS_RETRY_DELAY).await;
+                    }
+                    *WEBSOCKET_DISCONNECTED.write() = false;
                 }
             }
         }
@@ -41,9 +69,35 @@ pub fn App() -> Element {
             class: format!("{} min-h-screen bg-background text-foreground antialiased", theme().to_string()),
             div {
                 class: "mx-auto w-full max-w-4xl px-2 py-4",
-                BatteryIndicator {}
                 Router::<Route> {}
             }
         }
+    }
+}
+
+const WS_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+const WS_RETRY_DELAY: Duration = Duration::from_secs(5);
+
+#[cfg(feature = "web")]
+async fn connect_websocket() -> Result<Websocket<(), ServerMessage, CborEncoding>> {
+    match wasmtimer::tokio::timeout(WS_CONNECT_TIMEOUT, health()).await {
+        Ok(Ok(())) => {}
+        _ => return Err(CapturedError::from_display("server unreachable")),
+    }
+    match wasmtimer::tokio::timeout(WS_CONNECT_TIMEOUT, websocket_handler(WebSocketOptions::new())).await {
+        Ok(socket) => socket,
+        Err(_) => Err(CapturedError::from_display("websocket connect timed out")),
+    }
+}
+
+#[cfg(not(feature = "web"))]
+async fn connect_websocket() -> Result<Websocket<(), ServerMessage, CborEncoding>> {
+    match tokio::time::timeout(WS_CONNECT_TIMEOUT, health()).await {
+        Ok(Ok(())) => {}
+        _ => return Err(CapturedError::from_display("server unreachable")),
+    }
+    match tokio::time::timeout(WS_CONNECT_TIMEOUT, websocket_handler(WebSocketOptions::new())).await {
+        Ok(socket) => socket,
+        Err(_) => Err(CapturedError::from_display("websocket connect timed out")),
     }
 }

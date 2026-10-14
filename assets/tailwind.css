@@ -5,6 +5,10 @@
   :root, :host {
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
+    --color-red-500: oklch(63.7% 0.237 25.331);
+    --color-orange-500: oklch(70.5% 0.213 47.604);
+    --color-yellow-500: oklch(79.5% 0.184 86.047);
+    --color-green-500: oklch(72.3% 0.219 149.579);
     --color-purple-600: oklch(55.8% 0.288 302.321);
     --spacing: 0.25rem;
     --container-4xl: 56rem;
@@ -12,14 +16,18 @@
     --text-sm--line-height: calc(1.25 / 0.875);
     --text-base: 1rem;
     --text-base--line-height: calc(1.5 / 1);
+    --text-xl: 1.25rem;
+    --text-xl--line-height: calc(1.75 / 1.25);
     --text-2xl: 1.5rem;
     --text-2xl--line-height: calc(2 / 1.5);
     --text-3xl: 1.875rem;
     --text-3xl--line-height: calc(2.25 / 1.875);
     --font-weight-medium: 500;
     --font-weight-semibold: 600;
+    --font-weight-bold: 700;
     --tracking-tight: -0.025em;
     --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
     --default-font-family: sans-serif;
     --default-mono-font-family: var(--font-mono);
   }
@@ -170,11 +178,26 @@
   }
 }
 @layer utilities {
+  .absolute {
+    position: absolute;
+  }
   .relative {
     position: relative;
   }
   .static {
     position: static;
+  }
+  .top-1\/2 {
+    top: calc(1/2 * 100%);
+  }
+  .right-\[0\.04rem\] {
+    right: 0.04rem;
+  }
+  .left-1\/2 {
+    left: calc(1/2 * 100%);
+  }
+  .left-\[0\.04rem\] {
+    left: 0.04rem;
   }
   .z-10 {
     z-index: 10;
@@ -200,6 +223,12 @@
   .mx-auto {
     margin-inline: auto;
   }
+  .my-4 {
+    margin-block: calc(var(--spacing) * 4);
+  }
+  .block {
+    display: block;
+  }
   .flex {
     display: flex;
   }
@@ -215,11 +244,29 @@
   .h-12 {
     height: calc(var(--spacing) * 12);
   }
+  .h-\[0\.38rem\] {
+    height: 0.38rem;
+  }
+  .h-\[0\.76rem\] {
+    height: 0.76rem;
+  }
+  .h-\[1\.1rem\] {
+    height: 1.1rem;
+  }
   .min-h-screen {
     min-height: 100vh;
   }
   .w-12 {
     width: calc(var(--spacing) * 12);
+  }
+  .w-\[0\.28rem\] {
+    width: 0.28rem;
+  }
+  .w-\[0\.38rem\] {
+    width: 0.38rem;
+  }
+  .w-\[1\.1rem\] {
+    width: 1.1rem;
   }
   .w-full {
     width: 100%;
@@ -230,11 +277,28 @@
   .min-w-30 {
     min-width: calc(var(--spacing) * 30);
   }
+  .min-w-\[2ch\] {
+    min-width: 2ch;
+  }
   .shrink-0 {
     flex-shrink: 0;
   }
+  .-translate-x-1\/2 {
+    --tw-translate-x: calc(calc(1/2 * 100%) * -1);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
+  .-translate-y-1\/2 {
+    --tw-translate-y: calc(calc(1/2 * 100%) * -1);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
+  .rotate-45 {
+    rotate: 45deg;
+  }
   .grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .grid-cols-\[1fr_auto_1fr\] {
+    grid-template-columns: 1fr auto 1fr;
   }
   .items-center {
     align-items: center;
@@ -254,11 +318,29 @@
   .gap-1 {
     gap: calc(var(--spacing) * 1);
   }
+  .gap-3 {
+    gap: calc(var(--spacing) * 3);
+  }
   .gap-4 {
     gap: calc(var(--spacing) * 4);
   }
   .gap-6 {
     gap: calc(var(--spacing) * 6);
+  }
+  .justify-self-end {
+    justify-self: flex-end;
+  }
+  .justify-self-start {
+    justify-self: flex-start;
+  }
+  .rounded-2xl {
+    border-radius: var(--radius-2xl);
+  }
+  .rounded-\[0\.1rem\] {
+    border-radius: 0.1rem;
+  }
+  .rounded-\[0\.08rem\] {
+    border-radius: 0.08rem;
   }
   .rounded-full {
     border-radius: calc(infinity * 1px);
@@ -283,6 +365,18 @@
   .bg-card {
     background-color: var(--card);
   }
+  .bg-current {
+    background-color: currentcolor;
+  }
+  .fill-none {
+    fill: none;
+  }
+  .stroke-current {
+    stroke: currentcolor;
+  }
+  .p-2 {
+    padding: calc(var(--spacing) * 2);
+  }
   .p-4 {
     padding: calc(var(--spacing) * 4);
   }
@@ -291,6 +385,9 @@
   }
   .px-4 {
     padding-inline: calc(var(--spacing) * 4);
+  }
+  .py-3 {
+    padding-block: calc(var(--spacing) * 3);
   }
   .py-4 {
     padding-block: calc(var(--spacing) * 4);
@@ -314,9 +411,28 @@
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
   }
+  .text-xl {
+    font-size: var(--text-xl);
+    line-height: var(--tw-leading, var(--text-xl--line-height));
+  }
+  .text-\[0\.85rem\] {
+    font-size: 0.85rem;
+  }
+  .leading-5 {
+    --tw-leading: calc(var(--spacing) * 5);
+    line-height: calc(var(--spacing) * 5);
+  }
+  .leading-6 {
+    --tw-leading: calc(var(--spacing) * 6);
+    line-height: calc(var(--spacing) * 6);
+  }
   .leading-none {
     --tw-leading: 1;
     line-height: 1;
+  }
+  .font-bold {
+    --tw-font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-bold);
   }
   .font-medium {
     --tw-font-weight: var(--font-weight-medium);
@@ -336,12 +452,30 @@
   .text-foreground {
     color: var(--foreground);
   }
+  .text-green-500 {
+    color: var(--color-green-500);
+  }
+  .text-orange-500 {
+    color: var(--color-orange-500);
+  }
   .text-purple-600 {
     color: var(--color-purple-600);
+  }
+  .text-red-500 {
+    color: var(--color-red-500);
+  }
+  .text-yellow-500 {
+    color: var(--color-yellow-500);
+  }
+  .no-underline {
+    text-decoration-line: none;
   }
   .antialiased {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  .opacity-90 {
+    opacity: 90%;
   }
 }
 html, body {
@@ -386,6 +520,21 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     user-select: none;
   }
 }
+@property --tw-translate-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+@property --tw-translate-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+@property --tw-translate-z {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
 @property --tw-border-style {
   syntax: "*";
   inherits: false;
@@ -406,6 +555,9 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     *, ::before, ::after, ::backdrop {
+      --tw-translate-x: 0;
+      --tw-translate-y: 0;
+      --tw-translate-z: 0;
       --tw-border-style: solid;
       --tw-leading: initial;
       --tw-font-weight: initial;

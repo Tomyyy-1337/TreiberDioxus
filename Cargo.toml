@@ -13,13 +13,14 @@ dioxus-sdk = { version = "0.7.0", features = ["storage"] }
 tokio = { version = "1.53.3", default-features = false, optional = true }
 tower = { version = "0.5.3", optional = true }
 tower-http = { version = "0.7.1", features = ["fs", "cors","compression-gzip"], optional = true }
-wasmtimer = { version = "0.4.3" }
+wasmtimer = { version = "0.4.3", optional = true }
 
 [features]
 tokio-server = ["dep:tokio", "tokio/full"]
+tokio-client = ["dep:tokio", "tokio/time"]
 
-web = ["dioxus/web"]
-desktop = ["dioxus/desktop"]
-mobile = ["dioxus/mobile"]
+web = ["dioxus/web", "dep:wasmtimer"]
+desktop = ["dioxus/desktop", "tokio-client"]
+mobile = ["dioxus/mobile", "tokio-client"]
 server = ["dioxus/server", "tokio-server", "dep:tower", "dep:tower-http"]
 

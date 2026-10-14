@@ -10,7 +10,7 @@ pub struct BatteryState {
 #[cfg(feature = "server")]
 pub async fn update_battery_state(battery_sender: tokio::sync::watch::Sender<BatteryState>) {
     loop {
-        let new_percentage = (battery_sender.borrow().percentage + 1) % 101;
+        let new_percentage = (battery_sender.borrow().percentage + 10) % 101;
         let _ = battery_sender.send(BatteryState { percentage: new_percentage });
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await; 
     }

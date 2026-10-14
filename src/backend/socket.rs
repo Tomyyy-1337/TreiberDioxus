@@ -8,6 +8,11 @@ pub enum ServerMessage {
     GpsCountUpdate(SateliteCount),
 }
 
+#[get("/api/health")]
+pub async fn health() -> Result<()> {
+    Ok(())
+}
+
 #[get(
     "/ws", 
     battery: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<BatteryState>>, 

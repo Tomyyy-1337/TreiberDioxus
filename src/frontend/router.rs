@@ -5,6 +5,7 @@ use super::pages::camera::Camera;
 use super::pages::fahrtenbuch::Fahrtenbuch;
 use super::pages::einstellungen::Einstellungen;
 use super::settings_pages::settings_camera::SettingsCamera;
+use super::settings_pages::settings_anzeige::SettingsAnzeige;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
@@ -20,4 +21,6 @@ pub enum Route {
 
     #[route("/settings_camera")]
     SettingsCamera {},
+    #[route("/settings_anzeige")]
+    SettingsAnzeige {},
 }

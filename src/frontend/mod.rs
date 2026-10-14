@@ -1,5 +1,5 @@
 pub mod app;
-pub mod battery_indicator;
+mod icons;
 mod navbar;
 mod theme;
 mod settings_pages;
