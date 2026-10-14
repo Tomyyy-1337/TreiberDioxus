@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+/* Scan the project's Rust sources for the Tailwind classes they use. This
+   file is installed at the project root, so `./src` is the crate's source. */
+@source "./src/**/*.rs";
+
+/* Dark mode is opted into by putting the `dark` class on an ancestor,
+   typically <html>. */
+@custom-variant dark (&:is(.dark *));
+
+html,
+body {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom Classes */
+.select-arrow {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position: calc(100% - 12px) 50%, calc(100% - 8px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px, 4px 4px;
+  padding-right: 2rem;
+}
+
+/* Expose the tokens as Tailwind utilities (`bg-background`, `text-primary`,
+   `border-border`, ...). The indirection through plain variables on `:root`
+   and `.dark` is what lets the values swap when the color scheme changes. */
+@theme inline {
+  --font-sans: sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+}
+
+:root {
+  --background: oklch(0.9875 0.003 260);
+  --foreground: oklch(0.24 0.012 260);
+  --card: oklch(0.995 0.003 260);
+  --primary: oklch(0.21 0.02 260);
+  --destructive: oklch(0.58 0.17 28);
+  --border: oklch(0.9 0.008 260);
+}
+
+.dark {
+  --background: oklch(0.17 0.012 260);
+  --foreground: oklch(0.93 0.006 260);
+  --card: oklch(0.22 0.012 260);
+  --primary: oklch(0.92 0.008 260);
+  --destructive: oklch(0.68 0.15 28);
+  --border: oklch(0.3 0.012 260);
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}

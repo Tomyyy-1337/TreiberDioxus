@@ -1,0 +1,14 @@
+{
+  "rust-analyzer.cargo.noDefaultFeatures": true,
+  "rust-analyzer.cargo.features": ["server"],
+
+  "tailwindCSS.experimental.classRegex": [
+    [
+      "class\\s*[=:]\\s*((?:[^\"{},]|\\{[^}]*\\}|\"[^\"]*\")*)",
+      "\"([^\"]*)\""
+    ]
+  ],
+  "tailwindCSS.includeLanguages": {
+      "rust": "html"
+  }
+}
