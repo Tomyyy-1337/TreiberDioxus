@@ -1,0 +1,51 @@
+use dioxus::prelude::*;
+
+use super::router::Route;
+
+/// Mirrors router navigation into WebView history so the stock Android back key pops it via `popstate`.
+#[cfg(target_os = "android")]
+#[component]
+pub fn BackButton() -> Element {
+    let nav = navigator();
+    let route = use_route::<Route>();
+    let mut skip_push = use_signal(|| false);
+    let mut mounted = use_signal(|| false);
+
+    use_effect(use_reactive!(|route| {
+        let _ = &route;
+        if !*mounted.peek() {
+            mounted.set(true);
+            document::eval("history.pushState(null, '', location.href);");
+            return;
+        }
+        if *skip_push.peek() {
+            skip_push.set(false);
+            return;
+        }
+        document::eval("history.pushState(null, '', location.href);");
+    }));
+
+    use_future(move || async move {
+        let mut popstate = document::eval("window.addEventListener('popstate', () => dioxus.send('back'));");
+        while popstate.recv::<String>().await.is_ok() {
+            if nav.can_go_back() {
+                skip_push.set(true);
+                nav.go_back();
+            } else {
+                document::eval("history.pushState(null, '', location.href);");
+            }
+        }
+    });
+
+    rsx! {
+        Outlet::<Route> {}
+    }
+}
+
+#[cfg(not(target_os = "android"))]
+#[component]
+pub fn BackButton() -> Element {
+    rsx! {
+        Outlet::<Route> {}
+    }
+}
