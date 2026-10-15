@@ -68,6 +68,15 @@ pub async fn toggle_hdr() -> Result<bool> {
     Ok(hdr_enabled)
 }
 
+#[post("/api/set_exposure", ext: dioxus::server::axum::Extension<tokio::sync::watch::Sender<CameraInterface>>)]
+pub async fn set_exposure(exposure_compenstion: f32) -> Result<()> {
+    ext.0.send_modify(|interface| {
+        interface.exposure_compenstion = exposure_compenstion.clamp(-3.0, 3.0);
+    });
+
+    Ok(())
+}
+
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct CameraInterface {

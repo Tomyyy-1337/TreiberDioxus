@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::{backend::camera_interface::{FocusMode, Metering, set_bitrate, set_focal_length, set_focus_mode, set_metering_mode, toggle_hdr}, frontend::{app::{SETTINGS_CAMERA}, frondend_data::AutoRotate, settings_pages::settings_layout::SettingsWrapper}};
+use crate::{backend::camera_interface::{FocusMode, Metering, set_bitrate, set_exposure, set_focal_length, set_focus_mode, set_metering_mode, toggle_hdr}, frontend::{app::{SETTINGS_CAMERA, WEBSOCKET_DISCONNECTED}, frondend_data::AutoRotate, settings_pages::settings_layout::SettingsWrapper}};
 
 #[component]
 pub fn SettingsCamera() -> Element {
@@ -17,18 +17,21 @@ pub fn SettingsCamera() -> Element {
 
 #[component]
 pub fn SettingsCameraComponent() -> Element {
+    let disconnected = WEBSOCKET_DISCONNECTED();
+
     rsx! {
-        div { class :"grid gap-3 grid-cols-2",
+        fieldset { class: "contents", disabled: disconnected,
+            div {
+                class: if disconnected { "opacity-50 pointer-events-none" },
+                class: "grid gap-3 grid-cols-2",
 
-            FocalLength {}
-            MeteringMode {}
-            FocusModeSettings {}
-            BitrateSettings {}
-            HdrSettings {}
-            AutoLevelSettings {}
-
-            div { class:"col-span-2",
-            
+                FocalLength {}
+                MeteringMode {}
+                FocusModeSettings {}
+                BitrateSettings {}
+                HdrSettings {}
+                AutoLevelSettings {}
+                ExposureSettings {}
             }
         }
     }
@@ -81,6 +84,41 @@ pub fn SelectWidget<T: 'static + Clone + PartialEq>(
                         "{label}"
                     }
                 }
+            }
+        }
+    }
+}
+
+#[component]
+pub fn CheckboxWidget(
+    title: &'static str,
+    checked: bool,
+    onchange: EventHandler<bool>,
+) -> Element {
+    let name = title
+        .split_whitespace()
+        .map(str::to_lowercase)
+        .collect::<Vec<_>>()
+        .join("_");
+
+    let status = if checked { "Aktiv" } else { "Aus" };
+
+    rsx! {
+        label { class: "flex min-h-18 cursor-pointer items-center justify-between gap-3 rounded-lg border border-border bg-card px-2.5 py-2.5 transition-colors",
+            span { class: "grid min-w-0 gap-1",
+                span { class: "text-sm font-medium", "{title}" }
+                small { class: "text-[0.68rem] leading-none text-foreground/60", "{status}" }
+            }
+            input {
+                class: "peer sr-only",
+                name: "{name}_checkbox",
+                r#type: "checkbox",
+                checked: checked,
+                onchange: move |event: Event<FormData>| onchange.call(event.checked()),
+            }
+            span {
+                class: "relative h-5 w-9 shrink-0 rounded-full bg-border transition-colors after:absolute after:left-1 after:top-1 after:h-3 after:w-3 after:rounded-full after:bg-background after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:outline peer-focus-visible:outline-primary",
+                aria_hidden: "true",
             }
         }
     }
@@ -197,32 +235,18 @@ pub fn HdrSettings() -> Element {
     );
 
     rsx! {
-        label { class: "flex min-h-18 cursor-pointer items-center justify-between gap-3 rounded-lg border border-border bg-card px-2.5 py-2.5 transition-colors",
-            span { class: "grid min-w-0 gap-1",
-                span { class: "text-sm font-medium", "HDR" }
-                small { class: "text-[0.68rem] leading-none text-foreground/60",
-                    if hdr_enabled() { "Aktiv" } else { "Aus" }
-                }
-            }
-            input {
-                class: "peer sr-only",
-                name: "camera-hdr",
-                r#type: "checkbox",
-                checked: hdr_enabled(),
-                onclick: move |_| {
-                    spawn(async move {
-                        if let Ok(new_hdr_enabled) = toggle_hdr().await {
-                            if let Some(camera) = &mut *SETTINGS_CAMERA.write() {
-                                camera.hdr_enabled = new_hdr_enabled;
-                            }
+        CheckboxWidget {
+            title: "HDR",
+            checked: hdr_enabled(),
+            onchange: move |_| {
+                spawn(async move {
+                    if let Ok(new_hdr_enabled) = toggle_hdr().await {
+                        if let Some(camera) = &mut *SETTINGS_CAMERA.write() {
+                            camera.hdr_enabled = new_hdr_enabled;
                         }
-                    });
-                },
-            }
-            span {
-                class: "relative h-5 w-9 shrink-0 rounded-full bg-border transition-colors after:absolute after:left-1 after:top-1 after:h-3 after:w-3 after:rounded-full after:bg-background after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:outline peer-focus-visible:outline-primary",
-                aria_hidden: "true",
-            }
+                    }
+                });
+            },
         }
     }
 }
@@ -232,23 +256,90 @@ pub fn AutoLevelSettings() -> Element {
     let mut auto_rotate = use_context::<Signal<AutoRotate>>();
 
     rsx! {
-        label { class: "flex min-h-18 cursor-pointer items-center justify-between gap-3 rounded-lg border border-border bg-card px-2.5 py-2.5 transition-colors",
-            span { class: "grid min-w-0 gap-1",
-                span { class: "text-sm font-medium", "Auto Level" }
-                small { class: "text-[0.68rem] leading-none text-foreground/60",
-                    if auto_rotate().enabled { "Aktiv" } else { "Aus" }
+        CheckboxWidget {
+            title: "Auto Level",
+            checked: auto_rotate().enabled,
+            onchange: move |_| auto_rotate.with_mut(|auto_rotate| auto_rotate.enabled = !auto_rotate.enabled),
+        }
+    }
+}
+
+#[component]
+pub fn ExposureSettings() -> Element {
+    const EXPOSURE_LABELS: [&str; 13] = ["-3", "", "-2", "", "-1", "", "0", "", "+1", "", "+2", "", "+3"];
+
+    let hdr_enabled = use_memo(move ||
+        SETTINGS_CAMERA().map(|camera| camera.hdr_enabled).unwrap_or(false)
+    );
+    let server_exposure = use_memo(move ||
+        SETTINGS_CAMERA().map(|camera| camera.exposure_compenstion).unwrap_or(0.0)
+    );
+    let mut exposure = use_signal(|| 0.0_f32);
+
+    // Thumb centers travel from 0.5rem to (100% - 0.5rem), so ticks are placed on that span.
+    let ticks: Vec<(String, &str)> = EXPOSURE_LABELS
+        .iter()
+        .enumerate()
+        .map(|(index, label)| (format!("calc(0.5rem + (100% - 1rem) * {})", index as f32 / 12.0), *label))
+        .collect();
+
+    // Follow server updates; the local signal leads while the slider is dragged.
+    use_effect(move || exposure.set(server_exposure()));
+
+    rsx! {
+        div { class: "col-span-2",
+            if hdr_enabled() {
+                p { class: "my-0 flex h-24 items-center justify-center rounded-lg border border-dashed border-border bg-card px-3 py-2 text-center text-xs text-muted-foreground",
+                    "Belichtung ist bei HDR nicht verfügbar."
                 }
-            }
-            input {
-                class: "peer sr-only",
-                name: "camera-auto-level",
-                r#type: "checkbox",
-                checked: auto_rotate().enabled,
-                onclick: move |_| auto_rotate.with_mut(|auto_rotate| auto_rotate.enabled = !auto_rotate.enabled),
-            }
-            span {
-                class: "relative h-5 w-9 shrink-0 rounded-full bg-border transition-colors after:absolute after:left-1 after:top-1 after:h-3 after:w-3 after:rounded-full after:bg-background after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:outline peer-focus-visible:outline-primary",
-                aria_hidden: "true",
+            } else {
+                section { class: "my-0 grid h-24 content-start gap-2 rounded-lg border border-border bg-card px-3 py-2",
+                    div { class: "flex items-center justify-between",
+                        span { class: "text-[0.66rem] font-bold uppercase tracking-widest text-muted-foreground", "Belichtung" }
+                        output {
+                            class: "text-sm font-semibold tabular-nums text-card-foreground",
+                            "{exposure():+.1} EV"
+                        }
+                    }
+                    div { class: "grid gap-0.5",
+                        input {
+                            id: "camera-exposure-compensation",
+                            name: "camera-exposure-compensation",
+                            class: "mx-2 h-6 w-[calc(100%-1rem)] cursor-pointer accent-primary",
+                            r#type: "range",
+                            min: "-3",
+                            max: "3",
+                            step: "0.5",
+                            value: "{exposure()}",
+                            oninput: move |event: Event<FormData>| {
+                                if let Ok(value) = event.value().parse::<f32>() {
+                                    exposure.set(value);
+                                }
+                            },
+                            onchange: move |event: Event<FormData>| {
+                                if let Ok(value) = event.value().parse::<f32>() {
+                                    spawn(async move {
+                                        let _ = set_exposure(value).await;
+                                    });
+                                }
+                            },
+                        }
+                        div { class: "relative mx-2 h-7 text-[0.7rem] tabular-nums text-muted-foreground", aria_hidden: "true",
+                            for (index, (left, label)) in ticks.iter().enumerate() {
+                                if index % 2 == 0 {
+                                    span { class: "absolute top-0 flex -translate-x-1/2 flex-col items-center", style: "left: {left}",
+                                        i { class: "h-2.5 w-px bg-muted-foreground" }
+                                        b { class: "font-normal", "{label}" }
+                                    }
+                                } else {
+                                    span { class: "absolute top-0 flex -translate-x-1/2 justify-center", style: "left: {left}",
+                                        i { class: "h-2 w-px bg-border" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

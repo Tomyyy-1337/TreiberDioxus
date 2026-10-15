@@ -40,7 +40,7 @@ pub fn App() -> Element {
     let theme = use_context_provider(|| theme);
 
     let auto_rotate = use_storage::<LocalStorage, _>("auto_rotate".to_string(), || AutoRotate { enabled: false });
-    let auto_rotate = use_context_provider(|| auto_rotate);
+    use_context_provider(|| auto_rotate);
 
     let mut socket = use_websocket(|| connect_websocket());
     use_future(move || async move {
@@ -67,12 +67,6 @@ pub fn App() -> Element {
                     *WEBSOCKET_DISCONNECTED.write() = false;
                 }
             }
-        }
-    });
-
-    use_memo(move || {
-        if WEBSOCKET_DISCONNECTED() {
-            *SETTINGS_CAMERA.write() = None;
         }
     });
 

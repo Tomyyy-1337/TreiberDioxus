@@ -12,7 +12,7 @@ pub async fn update_battery_state(battery_sender: tokio::sync::watch::Sender<Bat
     loop {
         let new_percentage = (battery_sender.borrow().percentage + 10) % 101;
         let _ = battery_sender.send(BatteryState { percentage: new_percentage });
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await; 
+        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await; 
     }
 }
 
