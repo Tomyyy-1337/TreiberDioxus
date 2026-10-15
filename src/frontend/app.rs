@@ -36,18 +36,18 @@ fn handle_websocket_message(message: ServerMessage) {
 
 #[component]
 pub fn App() -> Element {
-    let theme = use_storage::<LocalStorage, _>("theme".to_string(), || Theme::Dark);
-    let theme = use_context_provider(|| theme);
-
-    let auto_rotate = use_storage::<LocalStorage, _>("auto_rotate".to_string(), || AutoRotate { enabled: false });
-    use_context_provider(|| auto_rotate);
-
     #[cfg(target_os = "android")]
     use_effect(|| {
         if let Err(err) = super::android_status_bar::set_status_bar_color(0xFF000000) {
             eprintln!("failed to set status bar colour: {err}");
         }
     });
+
+    let theme = use_storage::<LocalStorage, _>("theme".to_string(), || Theme::Dark);
+    let theme = use_context_provider(|| theme);
+
+    let auto_rotate = use_storage::<LocalStorage, _>("auto_rotate".to_string(), || AutoRotate { enabled: false });
+    use_context_provider(|| auto_rotate);
 
     use_future(move || async move {
         loop {
