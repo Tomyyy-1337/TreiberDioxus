@@ -7,7 +7,9 @@ use dioxus_sdk::storage::{LocalStorage, use_storage};
 
 use crate::backend::battery::BatteryState;
 use crate::backend::camera_interface::CameraInterface;
+use crate::backend::fahrt::FahrtInfo;
 use crate::backend::socket::{ServerMessage, health, websocket_handler};
+use crate::backend::tasks::read_accelerometer::CurrentBpm;
 
 use super::frondend_data::*;
 use super::router::Route;
@@ -18,7 +20,9 @@ const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 pub static BATTERY_STATE: GlobalSignal<Option<BatteryState>> = GlobalSignal::new(|| None);
 pub static GPS_COUNT: GlobalSignal<Option<u8>> = GlobalSignal::new(|| None);
 pub static WEBSOCKET_CONNECTED: GlobalSignal<bool> = GlobalSignal::new(|| false);
-pub static SETTINGS_CAMERA: GlobalSignal<Option<CameraInterface>> = GlobalSignal::new(|| None);
+pub static SETTINGS_CAMERA: GlobalSignal<CameraInterface> = GlobalSignal::new(|| CameraInterface::new());
+pub static FAHRT: GlobalSignal<Option<Option<FahrtInfo>>> = GlobalSignal::new(|| None);
+pub static BPM: GlobalSignal<Option<CurrentBpm>> = GlobalSignal::new(|| None);
 
 fn handle_websocket_message(message: ServerMessage) {
     match message {
@@ -29,7 +33,13 @@ fn handle_websocket_message(message: ServerMessage) {
             *GPS_COUNT.write() = Some(gps_count_message.count);
         }
         ServerMessage::SettingsCameraUpdate(camera_message) => {
-            *SETTINGS_CAMERA.write() = Some(camera_message);
+            *SETTINGS_CAMERA.write() = camera_message;
+        }
+        ServerMessage::FahrtUpdate(fahrt_message) => {
+            *FAHRT.write() = Some(fahrt_message);
+        }
+        ServerMessage::BpmUpdate(bpm_message) => {
+            *BPM.write() = Some(bpm_message);
         }
     }
 }

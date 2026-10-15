@@ -484,6 +484,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cast"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
+
+[[package]]
 name = "cc"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1890,6 +1896,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e9c71c2167ca323c882b99918929403426e2373ea17242ff5653e0d5e1058be"
 
 [[package]]
+name = "embedded-hal"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "361a90feb7004eca4019fb28352a9465666b24f840f5c3cddf0ff13920590b89"
+
+[[package]]
+name = "embedded-hal-nb"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fba4268c14288c828995299e59b12babdbe170f6c6d73731af1b4648142e8605"
+dependencies = [
+ "embedded-hal",
+ "nb",
+]
+
+[[package]]
 name = "encoding_rs"
 version = "0.8.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2014,7 +2036,7 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38e2275cc4e4fc009b0669731a1e5ab7ebf11f469eaede2bab9309a5b4d6057f"
 dependencies = [
- "memoffset",
+ "memoffset 0.9.1",
  "rustc_version",
 ]
 
@@ -2540,6 +2562,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "gpio-cdev"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09831ec59b80be69e75d29cf36e16afbbe5fd1af9c1bf4689ad91c77db5aa6a6"
+dependencies = [
+ "bitflags 2.13.2",
+ "libc",
+ "nix 0.27.1",
+]
+
+[[package]]
+name = "gpiocdev"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a6009ef6766dd62a7f5933d379d357ae89eaee4e9c2455b6596f359627660a1"
+dependencies = [
+ "gpiocdev-uapi",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "gpiocdev-uapi"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb1a3ace06ef708255a33e738ec7a5e7718fe8e53bd9a39299b4f1cd4b13e9a3"
+dependencies = [
+ "bitflags 2.13.2",
+ "ioctl-sys",
+ "libc",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "gtk"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2809,6 +2864,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "i2cdev"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b940f7497c4f95b863b21cd34c3737b53a67d80d94cf29055d7f7eeca6ffdb4"
+dependencies = [
+ "bitflags 2.13.2",
+ "byteorder",
+ "libc",
+ "nix 0.26.4",
+]
+
+[[package]]
 name = "iana-time-zone"
 version = "0.1.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3020,6 +3087,22 @@ checksum = "6928282826c822ad91bf1c9a1cb90a30ba1c26770749929b4656cd6be829cd7c"
 dependencies = [
  "rustversion",
 ]
+
+[[package]]
+name = "io-kit-sys"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "617ee6cf8e3f66f3b4ea67a4058564628cde41901316e19f559e14c7c72c5e7b"
+dependencies = [
+ "core-foundation-sys",
+ "mach2",
+]
+
+[[package]]
+name = "ioctl-sys"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bd11f3a29434026f5ff98c730b668ba74b1033637b8817940b54d040696133c"
 
 [[package]]
 name = "ipnet"
@@ -3311,6 +3394,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "linux-embedded-hal"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c54d3532c66df7cc711f1419e4ca28086dddb94fbe9f99be436ca520f907951f"
+dependencies = [
+ "cast",
+ "embedded-hal",
+ "embedded-hal-nb",
+ "gpio-cdev",
+ "i2cdev",
+ "nb",
+ "nix 0.31.3",
+ "serialport",
+ "spidev",
+ "sysfs_gpio",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3378,6 +3479,15 @@ name = "mac"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
+
+[[package]]
+name = "mach2"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d640282b302c0bb0a2a8e0233ead9035e3bed871f0b7e81fe4a1ec829765db44"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "macro-string"
@@ -3525,6 +3635,15 @@ dependencies = [
 
 [[package]]
 name = "memoffset"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
+name = "memoffset"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
@@ -3651,6 +3770,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "nb"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d5439c4ad607c3c23abf66de8c8bf57ba8adcd1f129e699851a6e43935d339d"
+
+[[package]]
 name = "ndk"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3685,6 +3810,65 @@ name = "new_debug_unreachable"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
+
+[[package]]
+name = "nix"
+version = "0.23.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f3790c00a0150112de0f4cd161e3d7fc4b2d8a5542ffc35f099a2562aecb35c"
+dependencies = [
+ "bitflags 1.3.2",
+ "cc",
+ "cfg-if",
+ "libc",
+ "memoffset 0.6.5",
+]
+
+[[package]]
+name = "nix"
+version = "0.26.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "598beaf3cc6fdd9a5dfb1630c2800c7acd31df7aaf0f565796fba2b53ca1af1b"
+dependencies = [
+ "bitflags 1.3.2",
+ "cfg-if",
+ "libc",
+]
+
+[[package]]
+name = "nix"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
+dependencies = [
+ "bitflags 2.13.2",
+ "cfg-if",
+ "libc",
+]
+
+[[package]]
+name = "nix"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
+dependencies = [
+ "bitflags 2.13.2",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
+]
+
+[[package]]
+name = "nix"
+version = "0.31.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
+dependencies = [
+ "bitflags 2.13.2",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
+]
 
 [[package]]
 name = "no_std_io2"
@@ -4911,8 +5095,11 @@ version = "0.3.0"
 dependencies = [
  "dioxus",
  "dioxus-sdk",
+ "gpiocdev",
  "jni 0.22.4",
  "lazy_static",
+ "libc",
+ "linux-embedded-hal",
  "ndk-context",
  "reqwest 0.13.5",
  "serde",
@@ -5233,6 +5420,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "serialport"
+version = "4.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ba5f8f29aa20853c4e3e85a33ec580eb66be1f057142e77a333834a318bacf2"
+dependencies = [
+ "bitflags 2.13.2",
+ "cfg-if",
+ "core-foundation 0.10.1",
+ "core-foundation-sys",
+ "io-kit-sys",
+ "mach2",
+ "nix 0.26.4",
+ "scopeguard",
+ "unescaper",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "servo_arc"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5430,6 +5635,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "spidev"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f611021817865236902d15bdf8d729b0bd232141b568d56bb88409a8dc27397"
+dependencies = [
+ "bitflags 2.13.2",
+ "libc",
+ "nix 0.29.0",
+]
+
+[[package]]
 name = "spin"
 version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5551,6 +5767,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.9",
+]
+
+[[package]]
+name = "sysfs_gpio"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8808c55bc926565c62ef7838bcaa8add51585236803e2bdfa1472e3a3ab5e17"
+dependencies = [
+ "nix 0.23.2",
 ]
 
 [[package]]
@@ -6174,6 +6399,15 @@ name = "typenum"
 version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
+
+[[package]]
+name = "unescaper"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7285e83a80ce76f5e7bce79fa41f68d78ba62d1003cf27bf748ab24413808cf4"
+dependencies = [
+ "thiserror 2.0.21",
+]
 
 [[package]]
 name = "unicase"

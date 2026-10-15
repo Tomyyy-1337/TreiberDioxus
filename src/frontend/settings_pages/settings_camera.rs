@@ -41,7 +41,7 @@ pub fn SettingsCameraComponent() -> Element {
 pub fn SelectWidget<T: 'static + Clone + PartialEq>(
     title: &'static str,
     options: &'static [(T, &'static str)],
-    selected: Option<T>,
+    selected: T,
     onchange: EventHandler<T>,
 ) -> Element {
     let name = title
@@ -68,19 +68,11 @@ pub fn SelectWidget<T: 'static + Clone + PartialEq>(
                         onchange.call(value.clone());
                     }
                 },
-                option {
-                    value: "",
-                    class: "bg-card text-base text-foreground",
-                    disabled: true,
-                    hidden: true,
-                    selected: selected.is_none(),
-                    "-"
-                }
                 for (index, (value, label)) in options.iter().enumerate() {
                     option {
                         class: "bg-card text-base text-foreground",
                         value: "{index}",
-                        selected: selected.as_ref() == Some(value),
+                        selected: selected == *value,
                         "{label}"
                     }
                 }
@@ -133,7 +125,7 @@ pub fn FocalLength() -> Element {
     ];
 
     let selected = use_memo(move ||
-        SETTINGS_CAMERA().map(|camera| camera.focal_length)
+        SETTINGS_CAMERA().focal_length
     );
     
     rsx! {
@@ -158,7 +150,7 @@ pub fn MeteringMode() -> Element {
     ];
 
     let selected = use_memo(move ||
-        SETTINGS_CAMERA().map(|camera| camera.metering_mode)
+        SETTINGS_CAMERA().metering_mode
     );
 
     rsx! {
@@ -183,7 +175,7 @@ pub fn FocusModeSettings() -> Element {
     ];
 
     let selected = use_memo(move ||
-        SETTINGS_CAMERA().map(|camera| camera.focus_mode)
+        SETTINGS_CAMERA().focus_mode
     );
 
     rsx! {
@@ -211,7 +203,7 @@ pub fn BitrateSettings() -> Element {
     ];
 
     let selected = use_memo(move ||
-        SETTINGS_CAMERA().map(|camera| camera.bitrate)
+        SETTINGS_CAMERA().bitrate
     );
 
     rsx! {
@@ -231,7 +223,7 @@ pub fn BitrateSettings() -> Element {
 #[component]
 pub fn HdrSettings() -> Element {
     let hdr_enabled = use_memo(move ||
-        SETTINGS_CAMERA().map(|camera| camera.hdr_enabled).unwrap_or(false)
+        SETTINGS_CAMERA().hdr_enabled
     );
 
     rsx! {
@@ -241,9 +233,7 @@ pub fn HdrSettings() -> Element {
             onchange: move |_| {
                 spawn(async move {
                     if let Ok(new_hdr_enabled) = toggle_hdr().await {
-                        if let Some(camera) = &mut *SETTINGS_CAMERA.write() {
-                            camera.hdr_enabled = new_hdr_enabled;
-                        }
+                        SETTINGS_CAMERA.write().hdr_enabled = new_hdr_enabled;
                     }
                 });
             },
@@ -269,10 +259,10 @@ pub fn ExposureSettings() -> Element {
     const EXPOSURE_LABELS: [&str; 13] = ["-3", "", "-2", "", "-1", "", "0", "", "+1", "", "+2", "", "+3"];
 
     let hdr_enabled = use_memo(move ||
-        SETTINGS_CAMERA().map(|camera| camera.hdr_enabled).unwrap_or(false)
+        SETTINGS_CAMERA().hdr_enabled
     );
     let server_exposure = use_memo(move ||
-        SETTINGS_CAMERA().map(|camera| camera.exposure_compenstion).unwrap_or(0.0)
+        SETTINGS_CAMERA().exposure_compenstion
     );
     let mut exposure = use_signal(|| 0.0_f32);
 

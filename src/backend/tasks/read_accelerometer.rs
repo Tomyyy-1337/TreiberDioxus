@@ -1,0 +1,198 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct CurrentBpm {
+    pub bpm: f32,
+}
+
+#[cfg(feature = "server")]
+pub async fn read_accelerometer_task(
+    fahrt_sender: tokio::sync::watch::Sender<Option<crate::backend::fahrt::Fahrt>>, 
+    bpm_sender: tokio::sync::watch::Sender<CurrentBpm>
+) {
+    use crate::backend::tasks::read_accelerometer::bpm_peak::BpmPeak;
+
+    let mut timer = tokio::time::interval(tokio::time::Duration::from_millis(100));
+    timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+    let mut bpm_processor = BpmPeak::default();
+
+    for loop_counter in 0usize.. {
+        timer.tick().await;
+
+        let (x,_,_) = crate::backend::server::I2C_INTERFACE.read_accelerometer_data().await;
+
+        bpm_processor.add_sample(x);
+
+        // Every 500 ms
+        if loop_counter % 5 == 0 {
+            let incremental_schläge = bpm_processor.get_incremental_schläge();
+            if incremental_schläge > 0 {
+                fahrt_sender.send_if_modified(|fahrt| {
+                    if let Some(fahrt) = fahrt {
+                        fahrt.increment_schläge(incremental_schläge);
+                        return true;
+                    }
+                    false
+                });
+            }
+            let current_bpm = bpm_processor.get_current_schläge_pro_minute();
+            bpm_sender.send_if_modified(|old: &mut CurrentBpm| {
+                if old.bpm != current_bpm {
+                    old.bpm = current_bpm;
+                    return true;
+                }
+                false
+            });
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+mod bpm_peak {
+    use std::{collections::VecDeque, time::{Duration, Instant}};
+
+const SAMPLE_INTERVAL: Duration = Duration::from_millis(100);
+const FILTER_ALPHA: f32 = 0.4;
+const BASELINE_ALPHA: f32 = 0.02;
+const NOISE_ALPHA: f32 = 0.05;
+const MIN_PEAK_DISTANCE: Duration = Duration::from_millis(1500);
+const ENTER_THRESHOLD_MULTIPLIER: f32 = 1.5;
+const EXIT_THRESHOLD_MULTIPLIER: f32 = 0.7;
+const MIN_SIGNAL_AMPLITUDE: f32 = 0.5;
+const POLARITY_CONFIRMATION_SAMPLES: u8 = 2;
+const SCHLAG_HISTORY_DURATION: Duration = Duration::from_secs(30);
+const SCHLAG_HISTORY_ENTRIES: usize = 4;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum AccelerationPhase {
+    Unknown,
+    Positive,
+    Negative,
+}
+
+pub struct BpmPeak {
+    filtered_sample: Option<f32>,
+    baseline: Option<f32>,
+    noise: f32,
+    phase: AccelerationPhase,
+    pending_phase: AccelerationPhase,
+    pending_samples: u8,
+    last_peak: Option<Instant>,
+    peaks: VecDeque<Instant>,
+    total_strokes: u32,
+    next_sample: Instant,
+    schläge_at_last_poll: u32,
+}
+
+impl Default for BpmPeak {
+    fn default() -> Self {
+        Self {
+            filtered_sample: None,
+            baseline: None,
+            noise: 0.0,
+            phase: AccelerationPhase::Unknown,
+            pending_phase: AccelerationPhase::Unknown,
+            pending_samples: 0,
+            last_peak: None,
+            peaks: VecDeque::new(),
+            total_strokes: 0,
+            next_sample: Instant::now(),
+            schläge_at_last_poll: 0
+        }
+    }
+}
+
+
+impl BpmPeak {
+    pub fn add_sample(&mut self, sample: i16) {
+        let now = self.next_sample;
+        self.next_sample += SAMPLE_INTERVAL;
+
+        let sample = sample as f32;
+        let filtered = match self.filtered_sample {
+            Some(previous) => previous + FILTER_ALPHA * (sample - previous),
+            None => sample,
+        };
+        self.filtered_sample = Some(filtered);
+
+        let baseline = match self.baseline {
+            Some(previous) => previous + BASELINE_ALPHA * (filtered - previous),
+            None => filtered,
+        };
+        self.baseline = Some(baseline);
+
+        let deviation = filtered - baseline;
+        self.noise += NOISE_ALPHA * (deviation.abs() - self.noise);
+        let enter_threshold = (self.noise * ENTER_THRESHOLD_MULTIPLIER).max(MIN_SIGNAL_AMPLITUDE);
+        let exit_threshold = (self.noise * EXIT_THRESHOLD_MULTIPLIER).max(MIN_SIGNAL_AMPLITUDE);
+
+        let detected_phase = if deviation > enter_threshold {
+            AccelerationPhase::Positive
+        } else if deviation < -enter_threshold {
+            AccelerationPhase::Negative
+        } else if deviation.abs() <= exit_threshold {
+            AccelerationPhase::Unknown
+        } else {
+            self.phase
+        };
+
+        if detected_phase == AccelerationPhase::Unknown {
+            self.pending_phase = AccelerationPhase::Unknown;
+            self.pending_samples = 0;
+        } else if detected_phase == self.pending_phase {
+            self.pending_samples = self.pending_samples.saturating_add(1);
+        } else {
+            self.pending_phase = detected_phase;
+            self.pending_samples = 1;
+        }
+
+        if self.pending_samples >= POLARITY_CONFIRMATION_SAMPLES
+            && self.phase != self.pending_phase
+        {
+            let previous_phase = self.phase;
+            self.phase = self.pending_phase;
+
+            if previous_phase == AccelerationPhase::Negative
+                && self.phase == AccelerationPhase::Positive
+                && self.last_peak.is_none_or(|last| now.duration_since(last) >= MIN_PEAK_DISTANCE)
+            {
+                self.peaks.push_back(now);
+                self.last_peak = Some(now);
+                self.total_strokes += 1;
+            }
+        }
+
+        self.remove_old_peaks();
+    }
+
+    pub fn get_incremental_schläge(&mut self) -> u32 {
+        let incr = self.total_strokes.saturating_sub(self.schläge_at_last_poll);
+        self.schläge_at_last_poll = self.total_strokes;
+        incr
+    }
+
+    pub fn get_current_schläge_pro_minute(&mut self) -> f32 {
+        if self.peaks.len() < SCHLAG_HISTORY_ENTRIES {
+            return 0.0;
+        }
+        let first = self.peaks[0];
+        let last = self.peaks[SCHLAG_HISTORY_ENTRIES - 1];
+        let duration_secs = last.duration_since(first).as_secs_f32();
+        if duration_secs == 0.0 {
+            return 0.0;
+        } 
+        let single_stroke_duration = duration_secs / (SCHLAG_HISTORY_ENTRIES - 1) as f32;
+        60.0 / single_stroke_duration
+    }
+
+    fn remove_old_peaks(&mut self) {
+        while self.peaks.len() > SCHLAG_HISTORY_ENTRIES || self.peaks.front().map_or(false, |&first| {
+            let now = std::time::Instant::now();
+            now.duration_since(first) > SCHLAG_HISTORY_DURATION
+        }) {
+            self.peaks.pop_front();
+        }
+    }
+}
+}

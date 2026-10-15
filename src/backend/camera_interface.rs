@@ -100,7 +100,6 @@ pub enum FocusMode {
     Fixed,
 }
 
-#[cfg(feature = "server")]
 impl CameraInterface {
     pub fn new() -> Self {
         CameraInterface {
@@ -113,6 +112,7 @@ impl CameraInterface {
         }
     }
 
+    #[cfg(feature = "server")]
     pub async fn send_to_camera(&self) -> Result<(), reqwest::Error> {
         let config = CameraConfig::from(self);
 
@@ -131,6 +131,7 @@ impl CameraInterface {
         Ok(())
     }
 
+    #[cfg(feature = "server")]
     fn get_roi(&self) -> String {
         const BASE_FOCAL_LENGTH: f32 = 28.0;
         

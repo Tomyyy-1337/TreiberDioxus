@@ -1,12 +1,14 @@
 use dioxus::{fullstack::{CborEncoding, WebSocketOptions, Websocket}, prelude::*};
 
-use crate::backend::{battery::BatteryState, camera_interface::{self, CameraInterface}, gps_receiver::SateliteCount};
+use crate::backend::{battery::BatteryState, camera_interface::{self, CameraInterface}, fahrt::{Fahrt, FahrtInfo}, gps_receiver::SateliteCount, tasks::read_accelerometer::CurrentBpm};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub enum ServerMessage {
     BatteryUpdate(BatteryState),
     GpsCountUpdate(SateliteCount),
-    SettingsCameraUpdate(CameraInterface)
+    SettingsCameraUpdate(CameraInterface),
+    FahrtUpdate(Option<FahrtInfo>),
+    BpmUpdate(CurrentBpm),
 }
 
 #[get("/api/health")]
@@ -18,7 +20,9 @@ pub async fn health() -> Result<()> {
     "/ws", 
     battery: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<BatteryState>>, 
     gps_count: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<SateliteCount>>,
-    camera_interface: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<CameraInterface>>
+    camera_interface: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<CameraInterface>>,
+    fahrt_info: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<Option<FahrtInfo>>>,
+    bpm: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<CurrentBpm>>,
 )]
 pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<(), ServerMessage, CborEncoding>> {
     Ok(
@@ -32,6 +36,12 @@ pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<()
             let mut camera_interface = camera_interface.0;
             camera_interface.mark_changed();
 
+            let mut fahrt_receiver = fahrt_info.0;
+            fahrt_receiver.mark_changed();
+
+            let mut bpm_receiver = bpm.0;
+            bpm_receiver.mark_changed();
+
             loop {
                 let message = tokio::select! {
                     _ = battery_receiver.changed() => {
@@ -42,6 +52,12 @@ pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<()
                     }
                     _ = camera_interface.changed() => {
                         ServerMessage::SettingsCameraUpdate(*camera_interface.borrow())
+                    }
+                    _ = fahrt_receiver.changed() => {
+                        ServerMessage::FahrtUpdate(*fahrt_receiver.borrow())
+                    }
+                    _ = bpm_receiver.changed() => {
+                        ServerMessage::BpmUpdate(*bpm_receiver.borrow())
                     }
                 };
                 if socket.send(message).await.is_err() {
