@@ -1,11 +1,12 @@
 use dioxus::{fullstack::{CborEncoding, WebSocketOptions, Websocket}, prelude::*};
 
-use crate::backend::{battery::BatteryState, gps_receiver::SateliteCount};
+use crate::backend::{battery::BatteryState, camera_interface::{self, CameraInterface}, gps_receiver::SateliteCount};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub enum ServerMessage {
     BatteryUpdate(BatteryState),
     GpsCountUpdate(SateliteCount),
+    SettingsCameraUpdate(CameraInterface)
 }
 
 #[get("/api/health")]
@@ -16,7 +17,8 @@ pub async fn health() -> Result<()> {
 #[get(
     "/ws", 
     battery: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<BatteryState>>, 
-    gps_count: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<SateliteCount>>
+    gps_count: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<SateliteCount>>,
+    camera_interface: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<CameraInterface>>
 )]
 pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<(), ServerMessage, CborEncoding>> {
     Ok(
@@ -27,6 +29,9 @@ pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<()
             let mut gps_count_receiver = gps_count.0;
             gps_count_receiver.mark_changed();
 
+            let mut camera_interface = camera_interface.0;
+            camera_interface.mark_changed();
+
             loop {
                 let message = tokio::select! {
                     _ = battery_receiver.changed() => {
@@ -34,6 +39,9 @@ pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<()
                     }
                     _ = gps_count_receiver.changed() => {
                         ServerMessage::GpsCountUpdate(*gps_count_receiver.borrow())
+                    }
+                    _ = camera_interface.changed() => {
+                        ServerMessage::SettingsCameraUpdate(*camera_interface.borrow())
                     }
                 };
                 if socket.send(message).await.is_err() {

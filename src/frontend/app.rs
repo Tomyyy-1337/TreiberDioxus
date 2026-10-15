@@ -6,6 +6,7 @@ use dioxus::prelude::*;
 use dioxus_sdk::storage::{SessionStorage, use_storage};
 
 use crate::backend::battery::BatteryState;
+use crate::backend::camera_interface::CameraInterface;
 use crate::backend::socket::{ServerMessage, health, websocket_handler};
 
 use super::theme::*;
@@ -17,14 +18,18 @@ const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 pub static BATTERY_STATE: GlobalSignal<Option<BatteryState>> = GlobalSignal::new(|| None);
 pub static GPS_COUNT: GlobalSignal<Option<u8>> = GlobalSignal::new(|| None);
 pub static WEBSOCKET_DISCONNECTED: GlobalSignal<bool> = GlobalSignal::new(|| false);
+pub static SETTINGS_CAMERA: GlobalSignal<Option<CameraInterface>> = GlobalSignal::new(|| None);
 
 fn handle_websocket_message(message: ServerMessage) {
     match message {
-        ServerMessage::BatteryUpdate(battery) => {
-            *BATTERY_STATE.write() = Some(battery);
+        ServerMessage::BatteryUpdate(battery_message) => {
+            *BATTERY_STATE.write() = Some(battery_message);
         }
-        ServerMessage::GpsCountUpdate(gps_count) => {
-            *GPS_COUNT.write() = Some(gps_count.count);
+        ServerMessage::GpsCountUpdate(gps_count_message) => {
+            *GPS_COUNT.write() = Some(gps_count_message.count);
+        }
+        ServerMessage::SettingsCameraUpdate(camera_message) => {
+            *SETTINGS_CAMERA.write() = Some(camera_message);
         }
     }
 }
@@ -59,6 +64,12 @@ pub fn App() -> Element {
                     *WEBSOCKET_DISCONNECTED.write() = false;
                 }
             }
+        }
+    });
+
+    use_memo(move || {
+        if WEBSOCKET_DISCONNECTED() {
+            *SETTINGS_CAMERA.write() = None;
         }
     });
 
