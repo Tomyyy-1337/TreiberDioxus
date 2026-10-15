@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::{backend::battery::current_battery, frontend::app::{BATTERY_STATE, WEBSOCKET_DISCONNECTED}};
+use crate::{backend::battery::current_battery, frontend::app::{BATTERY_STATE, WEBSOCKET_CONNECTED}};
 
 #[component]
 pub fn BatteryIndicator() -> Element {
@@ -25,7 +25,7 @@ pub fn BatteryIndicator() -> Element {
     let width = use_memo(move || u8::min(12, display_value() / 8));
 
     rsx! {
-        if !WEBSOCKET_DISCONNECTED() {
+        if WEBSOCKET_CONNECTED() {
             div {
                 class: format!("flex items-center gap-1 font-bold leading-none {}", color()),
                 svg {

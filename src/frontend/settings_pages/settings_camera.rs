@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::{backend::camera_interface::{FocusMode, Metering, set_bitrate, set_exposure, set_focal_length, set_focus_mode, set_metering_mode, toggle_hdr}, frontend::{app::{SETTINGS_CAMERA, WEBSOCKET_DISCONNECTED}, frondend_data::AutoRotate, settings_pages::settings_layout::SettingsWrapper}};
+use crate::{backend::camera_interface::{FocusMode, Metering, set_bitrate, set_exposure, set_focal_length, set_focus_mode, set_metering_mode, toggle_hdr}, frontend::{app::{SETTINGS_CAMERA, WEBSOCKET_CONNECTED}, frondend_data::AutoRotate, settings_pages::settings_layout::SettingsWrapper}};
 
 #[component]
 pub fn SettingsCamera() -> Element {
@@ -17,7 +17,7 @@ pub fn SettingsCamera() -> Element {
 
 #[component]
 pub fn SettingsCameraComponent() -> Element {
-    let disconnected = WEBSOCKET_DISCONNECTED();
+    let disconnected = !WEBSOCKET_CONNECTED();
 
     rsx! {
         fieldset { class: "contents", disabled: disconnected,

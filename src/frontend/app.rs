@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use dioxus::CapturedError;
-use dioxus::fullstack::{CborEncoding, WebSocketOptions, Websocket, use_websocket};
+use dioxus::fullstack::{CborEncoding, WebSocketOptions, Websocket};
 use dioxus::prelude::*;
 use dioxus_sdk::storage::{LocalStorage, use_storage};
 
@@ -17,7 +17,7 @@ const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 pub static BATTERY_STATE: GlobalSignal<Option<BatteryState>> = GlobalSignal::new(|| None);
 pub static GPS_COUNT: GlobalSignal<Option<u8>> = GlobalSignal::new(|| None);
-pub static WEBSOCKET_DISCONNECTED: GlobalSignal<bool> = GlobalSignal::new(|| false);
+pub static WEBSOCKET_CONNECTED: GlobalSignal<bool> = GlobalSignal::new(|| false);
 pub static SETTINGS_CAMERA: GlobalSignal<Option<CameraInterface>> = GlobalSignal::new(|| None);
 
 fn handle_websocket_message(message: ServerMessage) {
@@ -42,31 +42,20 @@ pub fn App() -> Element {
     let auto_rotate = use_storage::<LocalStorage, _>("auto_rotate".to_string(), || AutoRotate { enabled: false });
     use_context_provider(|| auto_rotate);
 
-    let mut socket = use_websocket(|| connect_websocket());
     use_future(move || async move {
         loop {
-            match socket.recv().await {
-                Ok(message) => handle_websocket_message(message),
-                Err(_) => {
-                    if !socket.is_closed() {
-                        continue;
-                    }
-                    *WEBSOCKET_DISCONNECTED.write() = true;
-                    loop {
-                        let result = connect_websocket().await;
-                        let connected = result.is_ok();
-                        socket.set(result);
-                        if connected {
-                            break;
-                        }
-                        #[cfg(feature = "web")]
-                        wasmtimer::tokio::sleep(WS_RETRY_DELAY).await;
-                        #[cfg(not(feature = "web"))]
-                        tokio::time::sleep(WS_RETRY_DELAY).await;
-                    }
-                    *WEBSOCKET_DISCONNECTED.write() = false;
-                }
+            let Ok(socket) = connect_websocket().await else {
+                #[cfg(feature = "web")]
+                wasmtimer::tokio::sleep(WS_RETRY_DELAY).await;
+                #[cfg(not(feature = "web"))]
+                tokio::time::sleep(WS_RETRY_DELAY).await;
+                continue;
+            };
+            *WEBSOCKET_CONNECTED.write() = true;
+            while let Ok(message) = socket.recv().await {
+                handle_websocket_message(message);
             }
+            *WEBSOCKET_CONNECTED.write() = false;
         }
     });
 

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
 	backend::gps_receiver::current_satelite_count,
-	frontend::app::{GPS_COUNT, WEBSOCKET_DISCONNECTED},
+	frontend::app::{GPS_COUNT, WEBSOCKET_CONNECTED},
 };
 
 #[component]
@@ -24,7 +24,7 @@ pub fn GpsIndicator() -> Element {
 	});
 
 	rsx! {
-		if !WEBSOCKET_DISCONNECTED() {
+		if WEBSOCKET_CONNECTED() {
 			div {
 				class: format!("flex items-center gap-1 font-bold leading-none {}", color()),
 				aria_label: format!("Satelliten: {}", display_value()),
