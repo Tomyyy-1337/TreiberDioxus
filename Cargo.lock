@@ -4911,7 +4911,9 @@ version = "0.3.0"
 dependencies = [
  "dioxus",
  "dioxus-sdk",
+ "jni 0.22.4",
  "lazy_static",
+ "ndk-context",
  "reqwest 0.13.5",
  "serde",
  "tokio",

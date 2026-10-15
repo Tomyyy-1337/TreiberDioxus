@@ -42,6 +42,13 @@ pub fn App() -> Element {
     let auto_rotate = use_storage::<LocalStorage, _>("auto_rotate".to_string(), || AutoRotate { enabled: false });
     use_context_provider(|| auto_rotate);
 
+    #[cfg(target_os = "android")]
+    use_effect(|| {
+        if let Err(err) = super::android_status_bar::set_status_bar_color(0xFF000000) {
+            eprintln!("failed to set status bar colour: {err}");
+        }
+    });
+
     use_future(move || async move {
         loop {
             let Ok(socket) = connect_websocket().await else {
