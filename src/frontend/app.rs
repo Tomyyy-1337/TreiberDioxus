@@ -76,7 +76,7 @@ pub fn App() -> Element {
 }
 
 const WS_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
-const WS_RETRY_DELAY: Duration = Duration::from_secs(5);
+const WS_RETRY_DELAY: Duration = Duration::from_secs(3);
 
 #[cfg(feature = "web")]
 async fn connect_websocket() -> Result<Websocket<(), ServerMessage, CborEncoding>> {
