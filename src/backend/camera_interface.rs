@@ -57,6 +57,17 @@ pub async fn set_bitrate(bitrate: u32) -> Result<()> {
     Ok(())
 }
 
+#[post("/api/toggle_hdr", ext: dioxus::server::axum::Extension<tokio::sync::watch::Sender<CameraInterface>>)]
+pub async fn toggle_hdr() -> Result<bool> {
+    let mut hdr_enabled = false;
+    ext.0.send_modify(|interface| {
+        interface.hdr_enabled = !interface.hdr_enabled;
+        hdr_enabled = interface.hdr_enabled;
+    });
+
+    Ok(hdr_enabled)
+}
+
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct CameraInterface {

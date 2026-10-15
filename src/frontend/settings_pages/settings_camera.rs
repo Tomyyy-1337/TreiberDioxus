@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::{backend::camera_interface::{FocusMode, Metering, set_bitrate, set_focal_length, set_focus_mode, set_metering_mode}, frontend::{app::SETTINGS_CAMERA, pages::camera, settings_pages::settings_layout::SettingsWrapper}};
+use crate::{backend::camera_interface::{FocusMode, Metering, set_bitrate, set_focal_length, set_focus_mode, set_metering_mode, toggle_hdr}, frontend::{app::{SETTINGS_CAMERA}, frondend_data::AutoRotate, settings_pages::settings_layout::SettingsWrapper}};
 
 #[component]
 pub fn SettingsCamera() -> Element {
@@ -24,6 +24,8 @@ pub fn SettingsCameraComponent() -> Element {
             MeteringMode {}
             FocusModeSettings {}
             BitrateSettings {}
+            HdrSettings {}
+            AutoLevelSettings {}
 
             div { class:"col-span-2",
             
@@ -47,7 +49,7 @@ pub fn SelectWidget<T: 'static + Clone + PartialEq>(
 
     rsx! {
         label { class: "grid min-w-0 gap-1 rounded-lg border border-border bg-card p-2.5",
-            span { class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground",
+            span { class: "block text-xs font-bold uppercase tracking-widest text-foreground/60",
                 "{title}"
             }
             select {
@@ -187,4 +189,69 @@ pub fn BitrateSettings() -> Element {
         }
     }
 }
+
+#[component]
+pub fn HdrSettings() -> Element {
+    let hdr_enabled = use_memo(move ||
+        SETTINGS_CAMERA().map(|camera| camera.hdr_enabled).unwrap_or(false)
+    );
+
+    rsx! {
+        label { class: "flex min-h-18 cursor-pointer items-center justify-between gap-3 rounded-lg border border-border bg-card px-2.5 py-2.5 transition-colors",
+            span { class: "grid min-w-0 gap-1",
+                span { class: "text-sm font-medium", "HDR" }
+                small { class: "text-[0.68rem] leading-none text-foreground/60",
+                    if hdr_enabled() { "Aktiv" } else { "Aus" }
+                }
+            }
+            input {
+                class: "peer sr-only",
+                name: "camera-hdr",
+                r#type: "checkbox",
+                checked: hdr_enabled(),
+                onclick: move |_| {
+                    spawn(async move {
+                        if let Ok(new_hdr_enabled) = toggle_hdr().await {
+                            if let Some(camera) = &mut *SETTINGS_CAMERA.write() {
+                                camera.hdr_enabled = new_hdr_enabled;
+                            }
+                        }
+                    });
+                },
+            }
+            span {
+                class: "relative h-5 w-9 shrink-0 rounded-full bg-border transition-colors after:absolute after:left-1 after:top-1 after:h-3 after:w-3 after:rounded-full after:bg-background after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:outline peer-focus-visible:outline-primary",
+                aria_hidden: "true",
+            }
+        }
+    }
+}
+
+#[component]
+pub fn AutoLevelSettings() -> Element {
+    let mut auto_rotate = use_context::<Signal<AutoRotate>>();
+
+    rsx! {
+        label { class: "flex min-h-18 cursor-pointer items-center justify-between gap-3 rounded-lg border border-border bg-card px-2.5 py-2.5 transition-colors",
+            span { class: "grid min-w-0 gap-1",
+                span { class: "text-sm font-medium", "Auto Level" }
+                small { class: "text-[0.68rem] leading-none text-foreground/60",
+                    if auto_rotate().enabled { "Aktiv" } else { "Aus" }
+                }
+            }
+            input {
+                class: "peer sr-only",
+                name: "camera-auto-level",
+                r#type: "checkbox",
+                checked: auto_rotate().enabled,
+                onclick: move |_| auto_rotate.with_mut(|auto_rotate| auto_rotate.enabled = !auto_rotate.enabled),
+            }
+            span {
+                class: "relative h-5 w-9 shrink-0 rounded-full bg-border transition-colors after:absolute after:left-1 after:top-1 after:h-3 after:w-3 after:rounded-full after:bg-background after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:outline peer-focus-visible:outline-primary",
+                aria_hidden: "true",
+            }
+        }
+    }
+}
+
 

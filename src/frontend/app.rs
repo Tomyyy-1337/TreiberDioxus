@@ -3,13 +3,13 @@ use std::time::Duration;
 use dioxus::CapturedError;
 use dioxus::fullstack::{CborEncoding, WebSocketOptions, Websocket, use_websocket};
 use dioxus::prelude::*;
-use dioxus_sdk::storage::{SessionStorage, use_storage};
+use dioxus_sdk::storage::{LocalStorage, SessionStorage, use_storage};
 
 use crate::backend::battery::BatteryState;
 use crate::backend::camera_interface::CameraInterface;
 use crate::backend::socket::{ServerMessage, health, websocket_handler};
 
-use super::theme::*;
+use super::frondend_data::*;
 use super::router::Route;
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -36,8 +36,11 @@ fn handle_websocket_message(message: ServerMessage) {
 
 #[component]
 pub fn App() -> Element {
-    let theme = use_storage::<SessionStorage, _>(String::from("theme"), || Theme::Dark);
+    let theme = use_storage::<SessionStorage, _>("theme".to_string(), || Theme::Dark);
     let theme = use_context_provider(|| theme);
+
+    let auto_rotate = use_storage::<SessionStorage, _>("auto_rotate".to_string(), || AutoRotate { enabled: false });
+    let auto_rotate = use_context_provider(|| auto_rotate);
 
     let mut socket = use_websocket(|| connect_websocket());
     use_future(move || async move {

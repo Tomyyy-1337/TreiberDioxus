@@ -15,3 +15,8 @@ impl Display for Theme {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AutoRotate {
+    pub enabled: bool,
+}

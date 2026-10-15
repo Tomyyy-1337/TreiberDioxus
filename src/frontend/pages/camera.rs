@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::frontend::theme::Theme;
+use crate::frontend::frondend_data::Theme;
 
 #[component]
 pub fn Camera() -> Element {
