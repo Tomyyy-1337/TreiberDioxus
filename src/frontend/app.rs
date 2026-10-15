@@ -52,10 +52,6 @@ pub fn App() -> Element {
     use_future(move || async move {
         loop {
             let Ok(socket) = connect_websocket().await else {
-                #[cfg(feature = "web")]
-                wasmtimer::tokio::sleep(WS_RETRY_DELAY).await;
-                #[cfg(not(feature = "web"))]
-                tokio::time::sleep(WS_RETRY_DELAY).await;
                 continue;
             };
             *WEBSOCKET_CONNECTED.write() = true;
@@ -86,7 +82,10 @@ const WS_RETRY_DELAY: Duration = Duration::from_secs(5);
 async fn connect_websocket() -> Result<Websocket<(), ServerMessage, CborEncoding>> {
     match wasmtimer::tokio::timeout(WS_CONNECT_TIMEOUT, health()).await {
         Ok(Ok(())) => {}
-        _ => return Err(CapturedError::from_display("server unreachable")),
+        _ => {
+            wasmtimer::tokio::sleep(WS_RETRY_DELAY).await;
+            return Err(CapturedError::from_display("server unreachable"))
+        }
     }
     match wasmtimer::tokio::timeout(WS_CONNECT_TIMEOUT, websocket_handler(WebSocketOptions::new())).await {
         Ok(socket) => socket,
@@ -98,8 +97,11 @@ async fn connect_websocket() -> Result<Websocket<(), ServerMessage, CborEncoding
 async fn connect_websocket() -> Result<Websocket<(), ServerMessage, CborEncoding>> {
     match tokio::time::timeout(WS_CONNECT_TIMEOUT, health()).await {
         Ok(Ok(())) => {}
-        _ => return Err(CapturedError::from_display("server unreachable")),
-    }
+        _ => {
+            tokio::time::sleep(WS_RETRY_DELAY).await;
+            return Err(CapturedError::from_display("server unreachable"))
+        }
+    }   
     match tokio::time::timeout(WS_CONNECT_TIMEOUT, websocket_handler(WebSocketOptions::new())).await {
         Ok(socket) => socket,
         Err(_) => Err(CapturedError::from_display("websocket connect timed out")),
