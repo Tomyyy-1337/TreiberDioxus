@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use dioxus::{server::{DioxusRouterExt, axum::{self, Extension}}};
 use tokio::{runtime::LocalOptions, sync::watch};
 
@@ -18,7 +20,10 @@ pub fn start_server() {
             tokio::spawn(update_gps(gps_count_sender.clone()));
             tokio::spawn(update_camera(camera_interface_receiver.clone()));
 
-            let addr = dioxus::cli_config::fullstack_address_or_localhost();
+            // Nedded only for dioxus cli commands
+            // let addr = dioxus::cli_config::fullstack_address_or_localhost();
+
+            let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
             let router = axum::Router::new()
                 .serve_dioxus_application(
                     dioxus::server::ServeConfig::builder(),
