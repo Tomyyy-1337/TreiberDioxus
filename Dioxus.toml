@@ -1,5 +1,6 @@
 [application]
 asset_dir = "public"
+android_manifest = "AndroidManifest.xml"
 
 [web.app]
 
