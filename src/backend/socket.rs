@@ -1,6 +1,6 @@
 use dioxus::{fullstack::{CborEncoding, WebSocketOptions, Websocket}, prelude::*};
 
-use crate::backend::{tasks::battery::BatteryState, camera_interface::{self, CameraInterface}, fahrt::{Fahrt, FahrtInfo}, gps_receiver::SateliteCount, tasks::read_accelerometer::CurrentBpm};
+use crate::backend::{camera_interface::CameraInterface, fahrt::FahrtInfo, gps_receiver::SateliteCount, tasks::{battery::BatteryState, current_stats::CurrentStats, read_accelerometer::CurrentBpm}};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub enum ServerMessage {
@@ -8,7 +8,7 @@ pub enum ServerMessage {
     GpsCountUpdate(SateliteCount),
     SettingsCameraUpdate(CameraInterface),
     FahrtUpdate(Option<FahrtInfo>),
-    BpmUpdate(CurrentBpm),
+    CurrentStatsUpdate(CurrentStats),
 }
 
 #[get("/api/health")]
@@ -18,46 +18,37 @@ pub async fn health() -> Result<()> {
 
 #[get(
     "/ws", 
-    battery: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<BatteryState>>, 
-    gps_count: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<SateliteCount>>,
-    camera_interface: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<CameraInterface>>,
-    fahrt_info: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<Option<FahrtInfo>>>,
-    bpm: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<CurrentBpm>>,
+    mut battery: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<BatteryState>>, 
+    mut gps_count: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<SateliteCount>>,
+    mut camera_interface: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<CameraInterface>>,
+    mut fahrt_info: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<Option<FahrtInfo>>>,
+    mut current_stats: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<CurrentStats>>, 
 )]
 pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<(), ServerMessage, CborEncoding>> {
     Ok(
         options.on_upgrade(move |mut socket| async move {
-            let mut battery_receiver = battery.0;
-            battery_receiver.mark_changed();
-
-            let mut gps_count_receiver = gps_count.0;
-            gps_count_receiver.mark_changed();
-
-            let mut camera_interface = camera_interface.0;
-            camera_interface.mark_changed();
-
-            let mut fahrt_receiver = fahrt_info.0;
-            fahrt_receiver.mark_changed();
-
-            let mut bpm_receiver = bpm.0;
-            bpm_receiver.mark_changed();
+            battery.0.mark_changed();
+            gps_count.0.mark_changed();
+            camera_interface.0.mark_changed();
+            fahrt_info.0.mark_changed();
+            current_stats.0.mark_changed();
 
             loop {
                 let message = tokio::select! {
-                    _ = battery_receiver.changed() => {
-                        ServerMessage::BatteryUpdate(*battery_receiver.borrow())
+                    _ = battery.0.changed() => {
+                        ServerMessage::BatteryUpdate(*battery.0.borrow())
                     }
-                    _ = gps_count_receiver.changed() => {
-                        ServerMessage::GpsCountUpdate(*gps_count_receiver.borrow())
+                    _ = gps_count.0.changed() => {
+                        ServerMessage::GpsCountUpdate(*gps_count.0.borrow())
                     }
-                    _ = camera_interface.changed() => {
-                        ServerMessage::SettingsCameraUpdate(*camera_interface.borrow())
+                    _ = camera_interface.0.changed() => {
+                        ServerMessage::SettingsCameraUpdate(*camera_interface.0.borrow())
                     }
-                    _ = fahrt_receiver.changed() => {
-                        ServerMessage::FahrtUpdate(*fahrt_receiver.borrow())
+                    _ = fahrt_info.0.changed() => {
+                        ServerMessage::FahrtUpdate(*fahrt_info.0.borrow())
                     }
-                    _ = bpm_receiver.changed() => {
-                        ServerMessage::BpmUpdate(*bpm_receiver.borrow())
+                    _ = current_stats.0.changed() => {
+                        ServerMessage::CurrentStatsUpdate(*current_stats.0.borrow())
                     }
                 };
                 if socket.send(message).await.is_err() {

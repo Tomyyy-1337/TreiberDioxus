@@ -1,4 +1,18 @@
+use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
+
+#[post("/api/toggle_fahrt", fahrt: dioxus::server::axum::Extension<tokio::sync::watch::Sender<Option<Fahrt>>>)]
+pub async fn toggle_fahrt(client_time: String) -> Result<()> {
+    fahrt.send_modify(|fahrt| {
+        if fahrt.is_some() {
+            *fahrt = None;
+        } else {
+            *fahrt = Some(Fahrt::new(client_time));
+        }
+    });
+    
+    return Ok(());
+}
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct GpsPosition {
@@ -24,6 +38,18 @@ pub struct FahrtInfo {
 }
 
 impl Fahrt {
+    pub fn new(client_time: String) -> Self {
+        Self {
+            client_time,
+            active_time: std::time::Duration::new(0, 0),
+            last_update: std::time::Instant::now(),
+            paused: false,
+            schlag_count: 0,
+            distance_traveled: 0.0,
+            gps_history: Vec::new(),
+        }
+    }
+
     pub fn get_info(&self) -> FahrtInfo {
         FahrtInfo {
             paused: self.paused,
