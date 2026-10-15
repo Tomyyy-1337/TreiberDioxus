@@ -1,7 +1,6 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Copy, Clone, Serialize, Deserialize, Debug)]
 pub struct BatteryState {
     pub percentage: u8,
@@ -9,10 +8,15 @@ pub struct BatteryState {
 
 #[cfg(feature = "server")]
 pub async fn update_battery_state(battery_sender: tokio::sync::watch::Sender<BatteryState>) {
+    let mut timer = tokio::time::interval(tokio::time::Duration::from_secs(30));
+    timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
     loop {
-        let new_percentage = (battery_sender.borrow().percentage + 10) % 101;
-        let _ = battery_sender.send(BatteryState { percentage: new_percentage });
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await; 
+        let battery_state = crate::backend::server::I2C_INTERFACE.read_battery_status().await;
+        println!("Battery state: {:?}", battery_state);
+        let _ = battery_sender.send(battery_state);
+
+        timer.tick().await;
     }
 }
 

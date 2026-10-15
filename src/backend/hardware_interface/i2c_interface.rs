@@ -4,6 +4,8 @@ use embedded_hal::i2c::I2c;
 use linux_embedded_hal::{I2cdev, I2CError};
 use std::sync::{Arc, Mutex};
 
+use crate::backend::tasks::battery::BatteryState;
+
 const I2C_BUS_PATH: &str = "/dev/i2c-1";
 
 const MAX17048_I2C_ADDRESS: u8 = 0b0110110;
@@ -47,6 +49,19 @@ impl I2cInterface {
         (x, y, z)
     }
 
+    pub async fn read_battery_status(&self) -> BatteryState {
+        let battery_level = self.read_async::<1>(
+            MAX17048_I2C_ADDRESS,
+            0x04,
+        ).await[0];
+
+        println!("Battery level: {}", battery_level);
+
+        BatteryState {
+            percentage: battery_level
+        }
+    }
+
     async fn read_async<const N: usize>(
         &self,
         address: u8,
@@ -76,26 +91,19 @@ type I2cDevice = MockI2cdev;
 
 // Mock I2C device for non-Linux platforms (Windows development)
 #[cfg(not(target_os = "linux"))]
-pub struct MockI2cdev {
-    memory: [u8; 8192]
-}
+pub struct MockI2cdev {}
 
 #[cfg(not(target_os = "linux"))]
 impl MockI2cdev {
     pub fn new(_path: &str) -> Result<Self, I2CError> {
-        Ok(MockI2cdev {
-            memory: [0; 8192]
-        })
+        Ok(MockI2cdev {})
     }
     
     pub fn write(&mut self, _addr: u8, _data: &[u8]) -> Result<(), I2CError> {
-        self.memory[.._data.len()].copy_from_slice(_data);
         Ok(())
     }
     
     pub fn write_read(&mut self, _addr: u8, _write_data: &[u8], _read_data: &mut [u8]) -> Result<(), I2CError> {
-        self.memory[.._write_data.len()].copy_from_slice(_write_data);
-        _read_data.copy_from_slice(&self.memory[.._read_data.len()]);
         Ok(())
     }
 }

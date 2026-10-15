@@ -5,7 +5,7 @@ use dioxus::fullstack::{CborEncoding, WebSocketOptions, Websocket};
 use dioxus::prelude::*;
 use dioxus_sdk::storage::{LocalStorage, use_storage};
 
-use crate::backend::battery::BatteryState;
+use crate::backend::tasks::battery::BatteryState;
 use crate::backend::camera_interface::CameraInterface;
 use crate::backend::fahrt::FahrtInfo;
 use crate::backend::socket::{ServerMessage, health, websocket_handler};

@@ -1,6 +1,8 @@
 use dioxus::prelude::*;
 
-use crate::{backend::battery::current_battery, frontend::app::{BATTERY_STATE, WEBSOCKET_CONNECTED}};
+#[cfg(feature = "server")]
+use crate::backend::tasks::battery::current_battery;
+use crate::{frontend::app::{BATTERY_STATE, WEBSOCKET_CONNECTED}};
 
 #[component]
 pub fn BatteryIndicator() -> Element {

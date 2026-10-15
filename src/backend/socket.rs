@@ -1,6 +1,6 @@
 use dioxus::{fullstack::{CborEncoding, WebSocketOptions, Websocket}, prelude::*};
 
-use crate::backend::{battery::BatteryState, camera_interface::{self, CameraInterface}, fahrt::{Fahrt, FahrtInfo}, gps_receiver::SateliteCount, tasks::read_accelerometer::CurrentBpm};
+use crate::backend::{tasks::battery::BatteryState, camera_interface::{self, CameraInterface}, fahrt::{Fahrt, FahrtInfo}, gps_receiver::SateliteCount, tasks::read_accelerometer::CurrentBpm};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub enum ServerMessage {
