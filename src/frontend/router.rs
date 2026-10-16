@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use super::android::back_button::BackButton;
-use super::navbar::NavbarLayout;
+use super::components::navbar::NavbarLayout;
 use super::pages::camera::Camera;
 use super::pages::fahrtenbuch::Fahrtenbuch;
 use super::pages::einstellungen::Einstellungen;

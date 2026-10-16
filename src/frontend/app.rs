@@ -1,13 +1,16 @@
 use std::time::Duration;
 
-use dioxus::CapturedError;
-use dioxus::fullstack::{CborEncoding, WebSocketOptions, Websocket};
 use dioxus::prelude::*;
+use dioxus::fullstack::{CborEncoding, WebSocketOptions, Websocket};
 use dioxus_sdk::storage::{LocalStorage, use_storage};
 
-use crate::{BatteryState, CameraInterface, CurrentStats};
-use crate::backend::fahrt::FahrtInfo;
-use crate::backend::api::socket::{ServerMessage, health, websocket_handler};
+use crate::{
+    BatteryState, CameraInterface, CurrentStats,
+    backend::{
+        fahrt::FahrtInfo,
+        api::socket::{ServerMessage, health, websocket_handler},
+    }
+};
 
 use super::frondend_data::*;
 use super::router::Route;
@@ -21,7 +24,6 @@ pub static WEBSOCKET_CONNECTED: GlobalSignal<bool> = GlobalSignal::new(|| false)
 pub static SETTINGS_CAMERA: GlobalSignal<CameraInterface> = GlobalSignal::new(|| CameraInterface::new());
 pub static FAHRT: GlobalSignal<Option<FahrtInfo>> = GlobalSignal::new(|| None);
 pub static CURRENT_STATS: GlobalSignal<CurrentStats> = GlobalSignal::new(|| CurrentStats { bpm: 0.0, velocity: 0.0 });
-
 
 fn handle_websocket_message(message: ServerMessage) {
     match message {
@@ -96,12 +98,12 @@ async fn connect_websocket() -> Result<Websocket<(), ServerMessage, CborEncoding
         Ok(Ok(())) => {}
         _ => {
             wasmtimer::tokio::sleep(WS_RETRY_DELAY).await;
-            return Err(CapturedError::from_display("server unreachable"))
+            return Err(dioxus::CapturedError::from_display("server unreachable"))
         }
     }
     match wasmtimer::tokio::timeout(WS_CONNECT_TIMEOUT, websocket_handler(WebSocketOptions::new())).await {
         Ok(socket) => socket,
-        Err(_) => Err(CapturedError::from_display("websocket connect timed out")),
+        Err(_) => Err(dioxus::CapturedError::from_display("websocket connect timed out")),
     }
 }
 
@@ -111,11 +113,11 @@ async fn connect_websocket() -> Result<Websocket<(), ServerMessage, CborEncoding
         Ok(Ok(())) => {}
         _ => {
             tokio::time::sleep(WS_RETRY_DELAY).await;
-            return Err(CapturedError::from_display("server unreachable"))
+            return Err(dioxus::CapturedError::from_display("server unreachable"))
         }
     }   
     match tokio::time::timeout(WS_CONNECT_TIMEOUT, websocket_handler(WebSocketOptions::new())).await {
         Ok(socket) => socket,
-        Err(_) => Err(CapturedError::from_display("websocket connect timed out")),
+        Err(_) => Err(dioxus::CapturedError::from_display("websocket connect timed out")),
     }
 }
