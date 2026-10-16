@@ -13,7 +13,6 @@ pub async fn update_battery_state(battery_sender: tokio::sync::watch::Sender<Bat
 
     loop {
         let battery_state = crate::backend::server::I2C_INTERFACE.read_battery_status().await;
-        println!("Battery state: {:?}", battery_state);
         let _ = battery_sender.send(battery_state);
 
         timer.tick().await;

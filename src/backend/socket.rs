@@ -1,6 +1,6 @@
 use dioxus::{fullstack::{CborEncoding, WebSocketOptions, Websocket}, prelude::*};
 
-use crate::backend::{camera_interface::CameraInterface, fahrt::FahrtInfo, gps_receiver::SateliteCount, tasks::{battery::BatteryState, current_stats::CurrentStats, read_accelerometer::CurrentBpm}};
+use crate::backend::{camera_interface::CameraInterface, fahrt::{Fahrt, FahrtInfo, FinishedFahrt}, gps_receiver::SateliteCount, tasks::{battery::BatteryState, current_stats::CurrentStats, read_accelerometer::CurrentBpm}};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub enum ServerMessage {
@@ -9,6 +9,7 @@ pub enum ServerMessage {
     SettingsCameraUpdate(CameraInterface),
     FahrtUpdate(Option<FahrtInfo>),
     CurrentStatsUpdate(CurrentStats),
+    FinishedFahrtUpdate(FinishedFahrt),
 }
 
 #[get("/api/health")]
@@ -21,6 +22,7 @@ pub async fn health() -> Result<()> {
     mut battery: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<BatteryState>>, 
     mut gps_count: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<SateliteCount>>,
     mut camera_interface: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<CameraInterface>>,
+    mut finished_fahrt: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<FinishedFahrt>>,
     mut fahrt_info: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<Option<FahrtInfo>>>,
     mut current_stats: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<CurrentStats>>, 
 )]
@@ -49,6 +51,9 @@ pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<()
                     }
                     _ = current_stats.0.changed() => {
                         ServerMessage::CurrentStatsUpdate(*current_stats.0.borrow())
+                    }
+                    _ = finished_fahrt.0.changed() => {
+                        ServerMessage::FinishedFahrtUpdate(*finished_fahrt.0.borrow())
                     }
                 };
                 if socket.send(message).await.is_err() {

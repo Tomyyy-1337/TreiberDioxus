@@ -55,8 +55,6 @@ impl I2cInterface {
             0x04,
         ).await[0];
 
-        println!("Battery level: {}", battery_level);
-
         BatteryState {
             percentage: battery_level
         }

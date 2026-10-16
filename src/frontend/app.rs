@@ -24,6 +24,7 @@ pub static SETTINGS_CAMERA: GlobalSignal<CameraInterface> = GlobalSignal::new(||
 pub static FAHRT: GlobalSignal<Option<FahrtInfo>> = GlobalSignal::new(|| None);
 pub static CURRENT_STATS: GlobalSignal<CurrentStats> = GlobalSignal::new(|| CurrentStats { bpm: 0.0, velocity: 0.0 });
 
+
 fn handle_websocket_message(message: ServerMessage) {
     match message {
         ServerMessage::BatteryUpdate(battery_message) => {
@@ -40,6 +41,9 @@ fn handle_websocket_message(message: ServerMessage) {
         }
         ServerMessage::CurrentStatsUpdate(current_stats_message) => {
             *CURRENT_STATS.write() = current_stats_message;
+        }
+        ServerMessage::FinishedFahrtUpdate(finished_fahrt) => {
+            // Add to Fahrtenbuch
         }
     }
 }

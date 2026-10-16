@@ -1,14 +1,17 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[post("/api/toggle_fahrt", fahrt: dioxus::server::axum::Extension<tokio::sync::watch::Sender<Option<Fahrt>>>)]
+#[post("/api/toggle_fahrt", fahrt: dioxus::server::axum::Extension<tokio::sync::watch::Sender<Option<Fahrt>>>, finished_fahrt: dioxus::server::axum::Extension<tokio::sync::watch::Sender<FinishedFahrt>>)]
 pub async fn toggle_fahrt(client_time: String) -> Result<()> {
     fahrt.send_modify(|fahrt| {
-        if fahrt.is_some() {
-            *fahrt = None;
-        } else {
-            *fahrt = Some(Fahrt::new(client_time));
+        *fahrt = match fahrt.take() {
+            Some(fahrt) => {
+                let _ = finished_fahrt.send(fahrt.finish());
+                None
+            },
+            None => Some(Fahrt::new(client_time))
         }
+        
     });
     
     return Ok(());
@@ -28,6 +31,11 @@ pub struct Fahrt {
     pub schlag_count: u32,
     pub distance_traveled: f64,
     pub gps_history: Vec<GpsPosition>,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct FinishedFahrt {
+    
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize, Debug)]
@@ -55,6 +63,12 @@ impl Fahrt {
             paused: self.paused,
             schlag_count: self.schlag_count,
             distance_traveled: self.distance_traveled,
+        }
+    }
+
+    pub fn finish(self) -> FinishedFahrt {
+        FinishedFahrt {
+            
         }
     }
 
