@@ -1,4 +1,4 @@
-use crate::{CurrentBpm, backend::fahrt::Fahrt};
+use crate::{CurrentBpm, backend::api::toggle_fahrt::Fahrt};
 use std::{collections::VecDeque, time::{Duration, Instant}};
 
 /// Read accelerometer data from the I2C interface

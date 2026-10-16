@@ -1,5 +1,17 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct FinishedFahrt {
+    
+}
+
+#[derive(Copy, Clone, Serialize, Deserialize, Debug)]
+pub struct FahrtInfo {
+    pub paused: bool,
+    pub schlag_count: u32,
+    pub distance_traveled: f64,
+}
+
 #[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct BatteryState {
     pub percentage: u8,

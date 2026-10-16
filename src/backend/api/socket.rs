@@ -1,6 +1,6 @@
 use dioxus::{fullstack::{CborEncoding, WebSocketOptions, Websocket}, prelude::*};
 
-use crate::{BatteryState, CameraInterface, CurrentStats, SateliteCount, backend::fahrt::{FahrtInfo, FinishedFahrt}};
+use crate::{BatteryState, CameraInterface, CurrentStats, FahrtInfo, FinishedFahrt, SateliteCount};
 
 #[cfg(feature = "server")]
 use dioxus::server::axum::Extension;

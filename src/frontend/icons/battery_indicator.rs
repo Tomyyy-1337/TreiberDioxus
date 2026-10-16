@@ -4,13 +4,13 @@ use crate::{frontend::app::{BATTERY_STATE, WEBSOCKET_CONNECTED}};
 
 #[component]
 pub fn BatteryIndicator() -> Element {
-    let color = use_memo(move || match BATTERY_STATE().percentage {
+    let color = use_memo(move || match BATTERY_STATE() {
         0..=14 => "text-red-500",
         15..=30 => "text-orange-500",
         31..=50 => "text-yellow-500",
         _ => "text-green-500",
     });
-    let width = use_memo(move || u8::min(12, BATTERY_STATE().percentage / 8));
+    let width = use_memo(move || u8::min(12, BATTERY_STATE() / 8));
 
     rsx! {
         if WEBSOCKET_CONNECTED() {
@@ -33,7 +33,7 @@ pub fn BatteryIndicator() -> Element {
                 }
                 span {
                     class: "inline-flex min-w-[2ch] items-center justify-center text-center text-[0.85rem]",
-                    "{BATTERY_STATE().percentage}%"
+                    "{BATTERY_STATE()}%"
                 }
             }
         }

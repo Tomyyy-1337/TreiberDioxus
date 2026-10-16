@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::backend::fahrt::{Fahrt, FahrtInfo};
+use crate::{FahrtInfo, backend::api::toggle_fahrt::Fahrt};
 
 pub async fn send_fahrt_task(
     mut fahrt_receiver: tokio::sync::watch::Receiver<Option<Fahrt>>,
