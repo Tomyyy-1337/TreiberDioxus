@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use dioxus::{server::{DioxusRouterExt, axum::{self, Extension}}};
 use tokio::{runtime::LocalOptions, sync::watch};
 
-use crate::{BatteryState, CurrentBpm, CurrentStats, backend::{camera_interface::{CameraInterface, update_camera}, fahrt::{Fahrt, FahrtInfo, FinishedFahrt}, gps_receiver::{SateliteCount, update_gps}, hardware_interface::i2c_interface::I2cInterface, tasks::{battery_reader::update_battery_state, current_stats::current_stats, fahrt_info_creator::fahrt_info_creator_task, read_accelerometer::read_accelerometer_task}}, frontend::app::App};
+use crate::{BatteryState, CameraInterface, CurrentBpm, CurrentStats, SateliteCount, backend::{fahrt::{Fahrt, FahrtInfo, FinishedFahrt}, hardware_interface::i2c_interface::I2cInterface, tasks::{reader_battery::read_battery_task, send_current_stats::send_current_stats_task, send_fahrt_info::send_fahrt_task, reader_gps::read_gps_task, reader_accelerometer::read_accelerometer_task, update_camera::update_camera_task}}, frontend::app::App};
 
 lazy_static::lazy_static! {
     pub static ref I2C_INTERFACE: I2cInterface = I2cInterface::new();
@@ -17,25 +17,21 @@ pub fn start_server() {
         .unwrap()
         .block_on(async {
             let (battery_sender, battery_receiver) = watch::channel(BatteryState { percentage: 0 });
-            tokio::spawn(update_battery_state(battery_sender.clone()));
-
+            
             let (bpm_sender, bpm_receiver) = watch::channel(CurrentBpm { bpm: 0.0 });
             let (fahrt_sender, fahrt_receiver) = watch::channel(None::<Fahrt>);
-            tokio::spawn(read_accelerometer_task(fahrt_sender.clone(), bpm_sender));
-
             let (fahrt_info_sender, fahrt_info_receiver) = watch::channel(None::<FahrtInfo>);
-            tokio::spawn(fahrt_info_creator_task(fahrt_receiver, fahrt_info_sender));
-            
             let (current_stats_sender, current_stats_receiver) = watch::channel(CurrentStats { bpm: 0.0, velocity: 0.0 });
-            tokio::spawn(current_stats(bpm_receiver, current_stats_sender));
-            
             let (gps_count_sender, gps_count_receiver) = watch::channel(SateliteCount { count: 0 });
-            tokio::spawn(update_gps(gps_count_sender.clone()));
-            
             let (camera_interface_sender, camera_interface_receiver) = watch::channel(CameraInterface::new());
-            tokio::spawn(update_camera(camera_interface_receiver.clone()));
-
             let (finished_fahrt_sender, finished_fahrt_receiver) = watch::channel(FinishedFahrt {});
+            
+            tokio::spawn(read_battery_task(battery_sender.clone()));
+            tokio::spawn(read_accelerometer_task(fahrt_sender.clone(), bpm_sender));
+            tokio::spawn(send_fahrt_task(fahrt_receiver, fahrt_info_sender));
+            tokio::spawn(send_current_stats_task(bpm_receiver, current_stats_sender));
+            tokio::spawn(read_gps_task(gps_count_sender.clone()));
+            tokio::spawn(update_camera_task(camera_interface_receiver.clone()));
             
             // Nedded only for dioxus cli commands
             // let addr = dioxus::cli_config::fullstack_address_or_localhost();
@@ -45,14 +41,23 @@ pub fn start_server() {
                     dioxus::server::ServeConfig::builder(),
                     App
                 )
+                // used by websocket
                 .layer(Extension(battery_receiver))
+                // used by websocket
                 .layer(Extension(gps_count_receiver))
+                // used by api::camera_settigns
                 .layer(Extension(camera_interface_sender))
+                // used by websocket and tasks::update_camera_task
                 .layer(Extension(camera_interface_receiver))
+                // used by websocket
                 .layer(Extension(fahrt_info_receiver))
+                // used by api::toggle_fahrt
                 .layer(Extension(fahrt_sender))
+                // used by api::finished_fahrt
                 .layer(Extension(finished_fahrt_sender))
+                // used by websocket
                 .layer(Extension(finished_fahrt_receiver))
+                // used by websocket
                 .layer(Extension(current_stats_receiver));
 
             let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();

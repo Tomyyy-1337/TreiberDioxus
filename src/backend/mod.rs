@@ -5,7 +5,7 @@ pub mod hardware_interface;
 #[cfg(feature = "server")]
 pub mod tasks;
 
+pub mod api;
+
 pub mod socket;
-pub mod gps_receiver;
-pub mod camera_interface;
 pub mod fahrt;

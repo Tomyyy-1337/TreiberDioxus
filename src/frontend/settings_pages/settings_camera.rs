@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::{backend::camera_interface::{FocusMode, Metering, set_bitrate, set_exposure, set_focal_length, set_focus_mode, set_metering_mode, toggle_hdr}, frontend::{app::{SETTINGS_CAMERA, WEBSOCKET_CONNECTED}, frondend_data::AutoRotate, settings_pages::settings_layout::SettingsWrapper}};
+use crate::{FocusMode, Metering, backend::api::camera_settings::{set_bitrate, set_exposure, set_focal_length, set_focus_mode, set_metering_mode, toggle_hdr}, frontend::{app::{SETTINGS_CAMERA, WEBSOCKET_CONNECTED}, frondend_data::AutoRotate, settings_pages::settings_layout::SettingsWrapper}};
 
 #[component]
 pub fn SettingsCamera() -> Element {
@@ -334,5 +334,4 @@ pub fn ExposureSettings() -> Element {
         }
     }
 }
-
 

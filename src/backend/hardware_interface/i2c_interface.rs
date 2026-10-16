@@ -4,8 +4,6 @@ use embedded_hal::i2c::I2c;
 use linux_embedded_hal::{I2cdev, I2CError};
 use std::sync::{Arc, Mutex};
 
-use crate::BatteryState;
-
 const I2C_BUS_PATH: &str = "/dev/i2c-1";
 
 const MAX17048_I2C_ADDRESS: u8 = 0b0110110;
@@ -49,15 +47,12 @@ impl I2cInterface {
         (x, y, z)
     }
 
-    pub async fn read_battery_status(&self) -> BatteryState {
-        let battery_level = self.read_async::<1>(
+    /// Read the battery percentage from the MAX17048 fuel gauge.
+    pub async fn read_battery_percentage(&self) -> u8 {
+        self.read_async::<1>(
             MAX17048_I2C_ADDRESS,
             0x04,
-        ).await[0];
-
-        BatteryState {
-            percentage: battery_level
-        }
+        ).await[0]
     }
 
     async fn read_async<const N: usize>(

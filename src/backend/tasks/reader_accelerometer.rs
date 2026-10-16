@@ -1,10 +1,10 @@
-use crate::CurrentBpm;
+use crate::{CurrentBpm, backend::fahrt::Fahrt};
 use std::{collections::VecDeque, time::{Duration, Instant}};
 
 /// Read accelerometer data from the I2C interface
 /// Count Beats and update the corresponding senders.
 pub async fn read_accelerometer_task(
-    fahrt_sender: tokio::sync::watch::Sender<Option<crate::backend::fahrt::Fahrt>>, 
+    fahrt_sender: tokio::sync::watch::Sender<Option<Fahrt>>, 
     bpm_sender: tokio::sync::watch::Sender<CurrentBpm>
 ) {
     let mut timer = tokio::time::interval(tokio::time::Duration::from_millis(100));
@@ -21,7 +21,7 @@ pub async fn read_accelerometer_task(
 
         // Every 500 ms
         if loop_counter % 5 == 0 {
-            // Update beat count for running fahrt
+            // Update beat count in running fahrt
             let incremental_schläge = bpm_processor.get_incremental_schläge();
             if incremental_schläge > 0 {
                 fahrt_sender.send_if_modified(|fahrt| {

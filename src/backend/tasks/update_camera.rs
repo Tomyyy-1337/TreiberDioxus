@@ -1,15 +1,16 @@
 use std::{str::FromStr, time::Duration};
 use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
-#[cfg(feature = "server")]
+use crate::CameraInterface;
+use crate::{FocusMode, Metering};
+
 lazy_static::lazy_static! {
     static ref CLIENT: reqwest::Client = reqwest::Client::builder().build().unwrap();
 }
 
 /// Send updates to the camera when the camera interface changes
-#[cfg(feature = "server")]
-pub async fn update_camera(mut camera_receiver: tokio::sync::watch::Receiver<CameraInterface>) {    
+pub async fn update_camera_task(mut camera_receiver: tokio::sync::watch::Receiver<CameraInterface>) {    
     camera_receiver.mark_changed();
 
     while let Ok(_) = camera_receiver.changed().await {
@@ -20,99 +21,7 @@ pub async fn update_camera(mut camera_receiver: tokio::sync::watch::Receiver<Cam
     }
 }
 
-
-#[post("/api/set_focal_length", ext: dioxus::server::axum::Extension<tokio::sync::watch::Sender<CameraInterface>>)]
-pub async fn set_focal_length(focal_length: u8) -> Result<()> { 
-    ext.0.send_modify(|interface| {
-        interface.focal_length = focal_length;
-    });
-    
-    Ok(())
-}
-
-#[post("/api/set_metering_mode", ext: dioxus::server::axum::Extension<tokio::sync::watch::Sender<CameraInterface>>)]
-pub async fn set_metering_mode(metering_mode: Metering) -> Result<()> {
-    ext.0.send_modify(|interface| {
-        interface.metering_mode = metering_mode;
-    });
-
-    Ok(())
-}
-
-#[post("/api/set_focus_mode", ext: dioxus::server::axum::Extension<tokio::sync::watch::Sender<CameraInterface>>)]
-pub async fn set_focus_mode(focus_mode: FocusMode) -> Result<()> {
-    ext.0.send_modify(|interface| {
-        interface.focus_mode = focus_mode;
-    });
-
-    Ok(())
-}
-
-#[post("/api/set_bitrate", ext: dioxus::server::axum::Extension<tokio::sync::watch::Sender<CameraInterface>>)]
-pub async fn set_bitrate(bitrate: u32) -> Result<()> {
-    ext.0.send_modify(|interface| {
-        interface.bitrate = bitrate;
-    });
-
-    Ok(())
-}
-
-#[post("/api/toggle_hdr", ext: dioxus::server::axum::Extension<tokio::sync::watch::Sender<CameraInterface>>)]
-pub async fn toggle_hdr() -> Result<bool> {
-    let mut hdr_enabled = false;
-    ext.0.send_modify(|interface| {
-        interface.hdr_enabled = !interface.hdr_enabled;
-        hdr_enabled = interface.hdr_enabled;
-    });
-
-    Ok(hdr_enabled)
-}
-
-#[post("/api/set_exposure", ext: dioxus::server::axum::Extension<tokio::sync::watch::Sender<CameraInterface>>)]
-pub async fn set_exposure(exposure_compenstion: f32) -> Result<()> {
-    ext.0.send_modify(|interface| {
-        interface.exposure_compenstion = exposure_compenstion.clamp(-3.0, 3.0);
-    });
-
-    Ok(())
-}
-
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct CameraInterface {
-    pub hdr_enabled: bool,
-    pub exposure_compenstion: f32,
-    pub metering_mode: Metering,
-    pub focus_mode: FocusMode,
-    pub focal_length: u8,
-    pub bitrate: u32,
-}
-
-#[derive(Serialize, Debug, Copy, Clone, PartialEq, Eq, Deserialize)]
-pub enum Metering {
-    Center,
-    Average,
-}
-
-#[derive(Serialize, Debug, Copy, Clone, PartialEq, Eq, Deserialize)]
-pub enum FocusMode {
-    Auto,
-    Fixed,
-}
-
 impl CameraInterface {
-    pub fn new() -> Self {
-        CameraInterface {
-            hdr_enabled: true,
-            exposure_compenstion: 0.0,
-            metering_mode: Metering::Average,
-            focus_mode: FocusMode::Fixed,
-            focal_length: 28,
-            bitrate: 3_200_000,
-        }
-    }
-
-    #[cfg(feature = "server")]
     pub async fn send_to_camera(&self) -> Result<(), reqwest::Error> {
         let config = CameraConfig::from(self);
 
@@ -131,7 +40,6 @@ impl CameraInterface {
         Ok(())
     }
 
-    #[cfg(feature = "server")]
     fn get_roi(&self) -> String {
         const BASE_FOCAL_LENGTH: f32 = 28.0;
         
@@ -154,7 +62,6 @@ struct CameraConfig {
     pub rpiCameraBitrate: u32,
 }
 
-#[cfg(feature = "server")]
 impl From<&CameraInterface> for CameraConfig {
     fn from(camera: &CameraInterface) -> Self {
         CameraConfig {
@@ -168,7 +75,6 @@ impl From<&CameraInterface> for CameraConfig {
     }
 }
 
-#[cfg(feature = "server")]
 impl ToString for Metering {
     fn to_string(&self) -> String {
         match self {
@@ -178,7 +84,6 @@ impl ToString for Metering {
     }
 }
 
-#[cfg(feature = "server")]
 impl FromStr for Metering {
     type Err = ();
 
@@ -191,7 +96,6 @@ impl FromStr for Metering {
     }
 }
 
-#[cfg(feature = "server")]
 impl ToString for FocusMode {
     fn to_string(&self) -> String {
         match self {
@@ -201,7 +105,6 @@ impl ToString for FocusMode {
     }
 }
 
-#[cfg(feature = "server")]
 impl FromStr for FocusMode {
     type Err = ();
 

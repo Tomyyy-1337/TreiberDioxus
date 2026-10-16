@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::backend::fahrt::{Fahrt, FahrtInfo};
 
-pub async fn fahrt_info_creator_task(
+pub async fn send_fahrt_task(
     mut fahrt_receiver: tokio::sync::watch::Receiver<Option<Fahrt>>,
     fahrt_info_sender: tokio::sync::watch::Sender<Option<FahrtInfo>>,
 ) {

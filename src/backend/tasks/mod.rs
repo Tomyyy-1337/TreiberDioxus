@@ -1,4 +1,6 @@
-pub mod battery_reader;
-pub mod read_accelerometer;
-pub mod fahrt_info_creator;
-pub mod current_stats;
+pub mod reader_battery;
+pub mod reader_accelerometer;
+pub mod send_fahrt_info;
+pub mod send_current_stats;
+pub mod update_camera;
+pub mod reader_gps;
