@@ -21,7 +21,6 @@ pub async fn read_accelerometer_task(
 
         // Every 500 ms
         if loop_counter % 5 == 0 {
-            // Update beat count in running fahrt
             let incremental_schläge = bpm_processor.get_incremental_schläge();
             if incremental_schläge > 0 {
                 fahrt_sender.send_if_modified(|fahrt| {
@@ -32,7 +31,6 @@ pub async fn read_accelerometer_task(
                     false
                 });
             }
-            // Update current bpm sender
             let current_bpm = bpm_processor.get_current_schläge_pro_minute();
             bpm_sender.send_if_modified(|old: &mut CurrentBpm| {
                 if old.bpm != current_bpm {

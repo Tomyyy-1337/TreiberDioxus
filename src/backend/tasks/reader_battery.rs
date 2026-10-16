@@ -9,6 +9,7 @@ pub async fn read_battery_task(battery_sender: watch::Sender<BatteryState>) {
     timer.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
     loop {
+        timer.tick().await;
         let battery_percentage = I2C_INTERFACE.read_battery_percentage().await;
         let _ = battery_sender.send(BatteryState { percentage: battery_percentage });
 
@@ -20,6 +21,5 @@ pub async fn read_battery_task(battery_sender: watch::Sender<BatteryState>) {
             pi_interface::shutdown();
         } 
 
-        timer.tick().await;
     }
 }

@@ -4,15 +4,17 @@ use serde::{Deserialize, Serialize};
 pub struct FinishedFahrt {
     pub client_start_time: String,
     pub schlag_count: u32,
-    pub distance_traveled: f64,
+    pub distance_traveled: f32,
     pub gps_history: Vec<GpsPosition>,
+    pub active_time: std::time::Duration,
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize, Debug)]
 pub struct FahrtInfo {
     pub paused: bool,
     pub schlag_count: u32,
-    pub distance_traveled: f64,
+    pub distance_traveled: f32,
+    pub active_time: std::time::Duration,
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq)]

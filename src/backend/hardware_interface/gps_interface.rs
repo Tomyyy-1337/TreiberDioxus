@@ -1,5 +1,4 @@
 use futures::Stream;
-use serde::Serialize;
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use std::time::Duration;
