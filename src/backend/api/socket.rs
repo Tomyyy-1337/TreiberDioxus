@@ -58,7 +58,7 @@ pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<()
                         ServerMessage::CurrentStatsUpdate(*current_stats.0.borrow())
                     }
                     _ = finished_fahrt.0.changed() => {
-                        ServerMessage::FinishedFahrtUpdate(*finished_fahrt.0.borrow())
+                        ServerMessage::FinishedFahrtUpdate(finished_fahrt.0.borrow().clone())
                     }
                 };
                 if socket.send(message).await.is_err() {

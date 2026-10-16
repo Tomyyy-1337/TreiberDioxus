@@ -23,9 +23,7 @@ pub async fn toggle_fahrt(client_time: String) -> Result<()> {
 }
 
 pub struct Fahrt {
-    pub client_time: String,
-    pub active_time: std::time::Duration,
-    pub last_update: std::time::Instant,
+    pub client_start_time: String,
     pub paused: bool,
     pub schlag_count: u32,
     pub distance_traveled: f64,
@@ -33,11 +31,9 @@ pub struct Fahrt {
 }
 
 impl Fahrt {
-    pub fn new(client_time: String) -> Self {
+    pub fn new(client_start_time: String) -> Self {
         Self {
-            client_time,
-            active_time: std::time::Duration::new(0, 0),
-            last_update: std::time::Instant::now(),
+            client_start_time,
             paused: false,
             schlag_count: 0,
             distance_traveled: 0.0,
@@ -55,7 +51,10 @@ impl Fahrt {
 
     pub fn finish(self) -> FinishedFahrt {
         FinishedFahrt {
-            
+            client_start_time: self.client_start_time,
+            schlag_count: self.schlag_count,
+            distance_traveled: self.distance_traveled,
+            gps_history: self.gps_history,
         }
     }
 

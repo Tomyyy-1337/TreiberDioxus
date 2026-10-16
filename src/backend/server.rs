@@ -24,7 +24,7 @@ pub fn start_server() {
             let (current_stats_sender, current_stats_receiver) = watch::channel(CurrentStats { bpm: 0.0, velocity: 0.0 });
             let (gps_count_sender, gps_count_receiver) = watch::channel(SateliteCount { count: 0 });
             let (camera_interface_sender, camera_interface_receiver) = watch::channel(CameraInterface::new());
-            let (finished_fahrt_sender, finished_fahrt_receiver) = watch::channel(FinishedFahrt {});
+            let (finished_fahrt_sender, finished_fahrt_receiver) = watch::channel(FinishedFahrt::default());
             
             tokio::spawn(read_battery_task(battery_sender.clone()));
             tokio::spawn(read_accelerometer_task(fahrt_sender.clone(), bpm_sender));

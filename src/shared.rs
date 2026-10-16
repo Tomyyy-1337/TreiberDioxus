@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct FinishedFahrt {
-    
+    pub client_start_time: String,
+    pub schlag_count: u32,
+    pub distance_traveled: f64,
+    pub gps_history: Vec<GpsPosition>,
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize, Debug)]
