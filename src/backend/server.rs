@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 
 use dioxus::{server::{DioxusRouterExt, axum::{self, Extension}}};
 use tokio::{runtime::LocalOptions, sync::watch};
+use tower_http::{CompressionLevel, compression::{CompressionLayer, predicate::SizeAbove}};
 
 use crate::{BatteryState, CameraInterface, CurrentBpm, CurrentStats, FahrtInfo, FinishedFahrt, SateliteCount, backend::{api::toggle_fahrt::Fahrt, hardware_interface::i2c_interface::I2cInterface, tasks::{reader_accelerometer::read_accelerometer_task, reader_battery::read_battery_task, reader_gps::read_gps_task, send_current_stats::send_current_stats_task, send_fahrt_info::send_fahrt_task, update_camera::update_camera_task}}, frontend::app::App};
 
@@ -41,6 +42,7 @@ pub fn start_server() {
                     dioxus::server::ServeConfig::builder(),
                     App
                 )
+                .layer(CompressionLayer::new().gzip(true).quality(CompressionLevel::Default).compress_when(SizeAbove::new(1024)))
                 // used by websocket
                 .layer(Extension(battery_receiver))
                 // used by websocket

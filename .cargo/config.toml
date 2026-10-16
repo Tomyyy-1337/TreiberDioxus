@@ -1,9 +1,10 @@
 # [profile.release]
 # opt-level = "s"
 # debug = false
+# panic = "abort"
+# strip = true
+# incremental = false
 # lto = true
 # codegen-units = 1
-# panic = "abort"
-# incremental = false
-# strip = true
+
 
