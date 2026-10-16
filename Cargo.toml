@@ -16,6 +16,10 @@ tower-http = { version = "0.7.1", features = ["fs", "cors","compression-gzip"], 
 wasmtimer = { version = "0.4.3", optional = true }
 reqwest = { version = "0.13.5", optional = true, features = ["json"] }
 lazy_static = { version = "1.5.1", optional = true }
+tokio-serial = { version = "5.5.0", optional = true }
+futures = { version = "0.3.34", optional = true }
+async-stream = { version = "0.3.6", optional = true }
+
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.22.4"
@@ -33,5 +37,18 @@ tokio-client = ["dep:tokio", "tokio/time"]
 web = ["dioxus/web", "dep:wasmtimer"]
 desktop = ["dioxus/desktop", "tokio-client"]
 mobile = ["dioxus/mobile", "tokio-client"]
-server = ["dioxus/server", "tokio-server", "dep:tower", "dep:tower-http", "dep:reqwest", "dep:lazy_static", "dep:linux-embedded-hal", "dep:gpiocdev", "dep:libc"]
+server = [
+    "dioxus/server", 
+    "tokio-server", 
+    "dep:tower", 
+    "dep:tower-http", 
+    "dep:reqwest", 
+    "dep:lazy_static", 
+    "dep:linux-embedded-hal", 
+    "dep:gpiocdev", 
+    "dep:libc",
+    "dep:tokio-serial",
+    "dep:futures",
+    "dep:async-stream",
+]
 

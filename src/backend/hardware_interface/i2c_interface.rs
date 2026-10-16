@@ -4,7 +4,7 @@ use embedded_hal::i2c::I2c;
 use linux_embedded_hal::{I2cdev, I2CError};
 use std::sync::{Arc, Mutex};
 
-use crate::backend::tasks::battery::BatteryState;
+use crate::BatteryState;
 
 const I2C_BUS_PATH: &str = "/dev/i2c-1";
 

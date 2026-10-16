@@ -1,17 +1,12 @@
-use serde::{Deserialize, Serialize};
+use crate::CurrentBpm;
+use std::{collections::VecDeque, time::{Duration, Instant}};
 
-#[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq)]
-pub struct CurrentBpm {
-    pub bpm: f32,
-}
-
-#[cfg(feature = "server")]
+/// Read accelerometer data from the I2C interface
+/// Count Beats and update the corresponding senders.
 pub async fn read_accelerometer_task(
     fahrt_sender: tokio::sync::watch::Sender<Option<crate::backend::fahrt::Fahrt>>, 
     bpm_sender: tokio::sync::watch::Sender<CurrentBpm>
 ) {
-    use crate::backend::tasks::read_accelerometer::bpm_peak::BpmPeak;
-
     let mut timer = tokio::time::interval(tokio::time::Duration::from_millis(100));
     timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
@@ -26,6 +21,7 @@ pub async fn read_accelerometer_task(
 
         // Every 500 ms
         if loop_counter % 5 == 0 {
+            // Update beat count for running fahrt
             let incremental_schläge = bpm_processor.get_incremental_schläge();
             if incremental_schläge > 0 {
                 fahrt_sender.send_if_modified(|fahrt| {
@@ -36,6 +32,7 @@ pub async fn read_accelerometer_task(
                     false
                 });
             }
+            // Update current bpm sender
             let current_bpm = bpm_processor.get_current_schläge_pro_minute();
             bpm_sender.send_if_modified(|old: &mut CurrentBpm| {
                 if old.bpm != current_bpm {
@@ -46,11 +43,7 @@ pub async fn read_accelerometer_task(
             });
         }
     }
-}
-
-#[cfg(feature = "server")]
-mod bpm_peak {
-    use std::{collections::VecDeque, time::{Duration, Instant}};
+} 
 
 const SAMPLE_INTERVAL: Duration = Duration::from_millis(100);
 const FILTER_ALPHA: f32 = 0.4;
@@ -102,7 +95,6 @@ impl Default for BpmPeak {
         }
     }
 }
-
 
 impl BpmPeak {
     pub fn add_sample(&mut self, sample: i16) {
@@ -194,5 +186,4 @@ impl BpmPeak {
             self.peaks.pop_front();
         }
     }
-}
 }

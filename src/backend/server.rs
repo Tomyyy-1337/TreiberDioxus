@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use dioxus::{server::{DioxusRouterExt, axum::{self, Extension}}};
 use tokio::{runtime::LocalOptions, sync::watch};
 
-use crate::{backend::{camera_interface::{CameraInterface, update_camera}, fahrt::{Fahrt, FahrtInfo, FinishedFahrt}, gps_receiver::{SateliteCount, update_gps}, hardware_interface::i2c_interface::I2cInterface, tasks::{battery::{BatteryState, update_battery_state}, current_stats::{CurrentStats, current_stats}, fahrt_info_creator::fahrt_info_creator_task, read_accelerometer::{CurrentBpm, read_accelerometer_task}}}, frontend::app::App};
+use crate::{BatteryState, CurrentBpm, CurrentStats, backend::{camera_interface::{CameraInterface, update_camera}, fahrt::{Fahrt, FahrtInfo, FinishedFahrt}, gps_receiver::{SateliteCount, update_gps}, hardware_interface::i2c_interface::I2cInterface, tasks::{battery_reader::update_battery_state, current_stats::current_stats, fahrt_info_creator::fahrt_info_creator_task, read_accelerometer::read_accelerometer_task}}, frontend::app::App};
 
 lazy_static::lazy_static! {
     pub static ref I2C_INTERFACE: I2cInterface = I2cInterface::new();

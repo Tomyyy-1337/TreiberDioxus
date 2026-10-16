@@ -5,11 +5,10 @@ use dioxus::fullstack::{CborEncoding, WebSocketOptions, Websocket};
 use dioxus::prelude::*;
 use dioxus_sdk::storage::{LocalStorage, use_storage};
 
-use crate::backend::tasks::battery::BatteryState;
+use crate::{BatteryState, CurrentStats};
 use crate::backend::camera_interface::CameraInterface;
 use crate::backend::fahrt::{FahrtInfo, toggle_fahrt};
 use crate::backend::socket::{ServerMessage, health, websocket_handler};
-use crate::backend::tasks::current_stats::CurrentStats;
 
 use super::frondend_data::*;
 use super::router::Route;
@@ -17,8 +16,8 @@ use super::router::Route;
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
-pub static BATTERY_STATE: GlobalSignal<Option<BatteryState>> = GlobalSignal::new(|| None);
-pub static GPS_COUNT: GlobalSignal<Option<u8>> = GlobalSignal::new(|| None);
+pub static BATTERY_STATE: GlobalSignal<BatteryState> = GlobalSignal::new(|| BatteryState { percentage: 0});
+pub static GPS_COUNT: GlobalSignal<u8> = GlobalSignal::new(|| 0);
 pub static WEBSOCKET_CONNECTED: GlobalSignal<bool> = GlobalSignal::new(|| false);
 pub static SETTINGS_CAMERA: GlobalSignal<CameraInterface> = GlobalSignal::new(|| CameraInterface::new());
 pub static FAHRT: GlobalSignal<Option<FahrtInfo>> = GlobalSignal::new(|| None);
@@ -28,10 +27,10 @@ pub static CURRENT_STATS: GlobalSignal<CurrentStats> = GlobalSignal::new(|| Curr
 fn handle_websocket_message(message: ServerMessage) {
     match message {
         ServerMessage::BatteryUpdate(battery_message) => {
-            *BATTERY_STATE.write() = Some(battery_message);
+            *BATTERY_STATE.write() = battery_message;
         }
         ServerMessage::GpsCountUpdate(gps_count_message) => {
-            *GPS_COUNT.write() = Some(gps_count_message.count);
+            *GPS_COUNT.write() = gps_count_message.count;
         }
         ServerMessage::SettingsCameraUpdate(camera_message) => {
             *SETTINGS_CAMERA.write() = camera_message;

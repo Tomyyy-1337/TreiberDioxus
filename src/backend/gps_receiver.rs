@@ -15,8 +15,3 @@ pub async fn update_gps(gps_sender: tokio::sync::watch::Sender<SateliteCount>) {
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     }
 }
-
-#[server(ext: dioxus::server::axum::Extension<tokio::sync::watch::Receiver<SateliteCount>>)]
-pub async fn current_satelite_count() -> Result<u8> {
-    Ok(ext.0.borrow().count)
-}
