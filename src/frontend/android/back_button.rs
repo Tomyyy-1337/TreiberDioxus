@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::router::Route;
+use crate::frontend::router::Route;
 
 /// Mirrors router navigation into WebView history so the stock Android back key pops it via `popstate`.
 #[cfg(target_os = "android")]

@@ -7,7 +7,7 @@ use dioxus_sdk::storage::{LocalStorage, use_storage};
 
 use crate::{BatteryState, CameraInterface, CurrentStats};
 use crate::backend::fahrt::FahrtInfo;
-use crate::backend::socket::{ServerMessage, health, websocket_handler};
+use crate::backend::api::socket::{ServerMessage, health, websocket_handler};
 
 use super::frondend_data::*;
 use super::router::Route;
@@ -50,7 +50,7 @@ fn handle_websocket_message(message: ServerMessage) {
 pub fn App() -> Element {
     #[cfg(target_os = "android")]
     use_effect(|| {
-        if let Err(err) = super::android_status_bar::set_status_bar_color(0xFF000000) {
+        if let Err(err) = super::android::status_bar_color::set_status_bar_color(0xFF000000) {
             eprintln!("failed to set status bar colour: {err}");
         }
     });

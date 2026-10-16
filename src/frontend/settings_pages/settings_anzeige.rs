@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::frontend::{router::Route, settings_pages::settings_layout::SettingsWrapper};
+use super::settings_layout::SettingsWrapper;
 
 #[component]
 pub fn SettingsAnzeige() -> Element {

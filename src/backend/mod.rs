@@ -7,5 +7,4 @@ pub mod tasks;
 
 pub mod api;
 
-pub mod socket;
 pub mod fahrt;
