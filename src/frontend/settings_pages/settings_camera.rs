@@ -232,10 +232,9 @@ pub fn HdrSettings() -> Element {
             checked: hdr_enabled(),
             onchange: move |_| {
                 spawn(async move {
-                    if let Ok(new_hdr_enabled) = toggle_hdr().await {
-                        SETTINGS_CAMERA.write().hdr_enabled = new_hdr_enabled;
-                    }
+                    let _ = toggle_hdr().await;
                 });
+                SETTINGS_CAMERA.write().hdr_enabled = !hdr_enabled();
             },
         }
     }

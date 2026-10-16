@@ -36,6 +36,13 @@ pub fn App() -> Element {
     let auto_rotate = use_storage::<LocalStorage, _>("auto_rotate".to_string(), || AutoRotate { enabled: false });
     use_context_provider(|| auto_rotate);
 
+    use_effect(move || {
+        let current_time = chrono::Local::now()
+            .format_localized("%A, %e. %B %Y %H:%M:%S", chrono::format::Locale::de_DE)
+            .to_string();
+        info!("Current time: {}", current_time);
+    });
+
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS },
