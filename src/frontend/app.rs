@@ -27,26 +27,22 @@ pub static CURRENT_STATS: GlobalSignal<CurrentStats> = GlobalSignal::new(|| Curr
 pub fn App() -> Element {
     #[cfg(target_os = "android")]
     set_status_bar_color();
-    
-    use_websocket_listener();
 
     let theme = use_storage::<LocalStorage, _>("theme".to_string(), || Theme::Dark);
     let theme = use_context_provider(|| theme);
 
+    let fahrtenbuch = use_storage::<LocalStorage, _>("fahrtenbuch".to_string(), || Fahrtenbuch::new());
+    let fahrtenbuch = use_context_provider(|| fahrtenbuch);
+    
     let auto_rotate = use_storage::<LocalStorage, _>("auto_rotate".to_string(), || AutoRotate { enabled: false });
     use_context_provider(|| auto_rotate);
-
-    use_effect(move || {
-        let current_time = chrono::Local::now()
-            .format_localized("%A, %e. %B %Y %H:%M:%S", chrono::format::Locale::de_DE)
-            .to_string();
-        info!("Current time: {}", current_time);
-    });
+    
+    use_websocket_listener(fahrtenbuch);
 
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS },
-        main { 
+        div { 
             class: format!("{} min-h-screen bg-background text-foreground antialiased", theme().to_string()),
             div {
                 class: "mx-auto w-full max-w-4xl px-2 py-4",
@@ -56,7 +52,7 @@ pub fn App() -> Element {
     }
 }
 
-fn handle_websocket_message(message: ServerMessage) {
+fn handle_websocket_message(message: ServerMessage, mut fahrtenbuch: Signal<Fahrtenbuch>) {
     match message {
         ServerMessage::BatteryUpdate(battery_message) => {
             *BATTERY_STATE.write() = battery_message.percentage;
@@ -74,13 +70,13 @@ fn handle_websocket_message(message: ServerMessage) {
             *CURRENT_STATS.write() = current_stats_message;
         }
         ServerMessage::FinishedFahrtUpdate(finished_fahrt) => {
-            // Add to Fahrtenbuch
+            fahrtenbuch.write().add_entry(finished_fahrt);
         }
     }
 }
 
 /// Keeps a persistent websocket connection to the server and handles incoming messages.
-fn use_websocket_listener() {
+fn use_websocket_listener(fahrtenbuch: Signal<Fahrtenbuch>) {
     use_future(move || async move {
         loop {
             let Ok(socket) = connect_websocket().await else {
@@ -88,7 +84,7 @@ fn use_websocket_listener() {
             };
             *WEBSOCKET_CONNECTED.write() = true;
             while let Ok(message) = socket.recv().await {
-                handle_websocket_message(message);
+                handle_websocket_message(message, fahrtenbuch);
             }
             *WEBSOCKET_CONNECTED.write() = false;
         }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct FinishedFahrt {
     pub client_start_time: String,
     pub schlag_count: u32,
@@ -9,7 +9,7 @@ pub struct FinishedFahrt {
     pub active_time: std::time::Duration,
 }
 
-#[derive(Copy, Clone, Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct FahrtInfo {
     pub paused: bool,
     pub schlag_count: u32,

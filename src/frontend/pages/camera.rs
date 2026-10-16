@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::frontend::frondend_data::Theme;
+use crate::{backend::api::toggle_fahrt::toggle_fahrt, frontend::frondend_data::Theme};
 
 #[component]
 pub fn Camera() -> Element {
@@ -23,6 +23,19 @@ pub fn Camera() -> Element {
                 };
             },
             "Toggle theme!"
+        }
+
+        button {
+            onclick: move |_| {
+                let current_time = chrono::Local::now()
+                    .format_localized("%A, %e. %B %Y %H:%M:%S", chrono::format::Locale::de_DE)
+                    .to_string();
+                
+                spawn(async move { 
+                    let  _ = toggle_fahrt(current_time).await;
+                });
+            },
+            "Toggle Fahrt"
         }
     }
 }

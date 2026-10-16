@@ -28,7 +28,7 @@ pub fn Navbar() -> Element {
                 Link {
                     active_class: "text-purple-600",
                     class: "z-10 flex h-11 min-w-30 items-center justify-center whitespace-nowrap rounded-xl px-4 text-center text-base font-semibold text-foreground",
-                    to: Route::Fahrtenbuch {},
+                    to: Route::FahrtenbuchPage {},
                     "Fahrtenbuch"
                 }
                 Link {

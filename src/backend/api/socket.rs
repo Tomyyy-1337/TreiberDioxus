@@ -32,39 +32,37 @@ pub async fn health() -> Result<()> {
     mut current_stats: Extension<watch::Receiver<CurrentStats>>, 
 )]
 pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<(), ServerMessage, CborEncoding>> {
-    Ok(
-        options.on_upgrade(move |mut socket| async move {
-            battery.0.mark_changed();
-            gps_count.0.mark_changed();
-            camera_interface.0.mark_changed();
-            fahrt_info.0.mark_changed();
-            current_stats.0.mark_changed();
+    Ok(options.on_upgrade(move |mut socket| async move {
+        battery.0.mark_changed();
+        gps_count.0.mark_changed();
+        camera_interface.0.mark_changed();
+        fahrt_info.0.mark_changed();
+        current_stats.0.mark_changed();
 
-            loop {
-                let message = tokio::select! {
-                    _ = battery.0.changed() => {
-                        ServerMessage::BatteryUpdate(*battery.0.borrow())
-                    }
-                    _ = gps_count.0.changed() => {
-                        ServerMessage::GpsCountUpdate(*gps_count.0.borrow())
-                    }
-                    _ = camera_interface.0.changed() => {
-                        ServerMessage::SettingsCameraUpdate(*camera_interface.0.borrow())
-                    }
-                    _ = fahrt_info.0.changed() => {
-                        ServerMessage::FahrtUpdate(*fahrt_info.0.borrow())
-                    }
-                    _ = current_stats.0.changed() => {
-                        ServerMessage::CurrentStatsUpdate(*current_stats.0.borrow())
-                    }
-                    _ = finished_fahrt.0.changed() => {
-                        ServerMessage::FinishedFahrtUpdate(finished_fahrt.0.borrow().clone())
-                    }
-                };
-                if socket.send(message).await.is_err() {
-                    break;
+        loop {
+            let message = tokio::select! {
+                _ = battery.0.changed() => {
+                    ServerMessage::BatteryUpdate(*battery.0.borrow())
                 }
+                _ = gps_count.0.changed() => {
+                    ServerMessage::GpsCountUpdate(*gps_count.0.borrow())
+                }
+                _ = camera_interface.0.changed() => {
+                    ServerMessage::SettingsCameraUpdate(*camera_interface.0.borrow())
+                }
+                _ = fahrt_info.0.changed() => {
+                    ServerMessage::FahrtUpdate(*fahrt_info.0.borrow())
+                }
+                _ = current_stats.0.changed() => {
+                    ServerMessage::CurrentStatsUpdate(*current_stats.0.borrow())
+                }
+                _ = finished_fahrt.0.changed() => {
+                    ServerMessage::FinishedFahrtUpdate(finished_fahrt.0.borrow().clone())
+                }
+            };
+            if socket.send(message).await.is_err() {
+                break;
             }
-        })
-    )   
+        }
+    }))   
 }

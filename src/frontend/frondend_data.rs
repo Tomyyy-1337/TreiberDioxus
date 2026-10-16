@@ -1,5 +1,8 @@
+use dioxus::logger::tracing::info;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{collections::VecDeque, fmt::Display};
+
+use crate::{FahrtInfo, FinishedFahrt};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Theme {
@@ -19,4 +22,39 @@ impl Display for Theme {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AutoRotate {
     pub enabled: bool,
+}
+
+const MAX_ENTRIES: usize = 100;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Fahrtenbuch {
+    pub next_index: u64,
+    pub entries: VecDeque<Indexed<FinishedFahrt>>,
+}
+
+impl Fahrtenbuch {
+    pub fn new() -> Self {
+        Fahrtenbuch {
+            next_index: 0,
+            entries: VecDeque::new(),
+        }
+    }
+
+    pub fn add_entry(&mut self, value: FinishedFahrt) {
+        let entry = Indexed {
+            index: self.next_index,
+            value,
+        };
+        self.entries.push_back(entry);
+        self.next_index += 1;
+        while self.entries.len() > MAX_ENTRIES {
+            self.entries.pop_front();
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Indexed<T> {
+    pub index: u64,
+    pub value: T,
 }

@@ -22,8 +22,7 @@ pub async fn toggle_fahrt(client_time: String) -> Result<()> {
 
 pub struct Fahrt {
     pub client_start_time: String,
-    pub start_time: std::time::Instant,
-    pub inactive_time: std::time::Duration,
+    pub active_time: std::time::Duration,
     pub last_gps_update: std::time::Instant,
     pub paused: bool,
     pub schlag_count: u32,
@@ -37,8 +36,7 @@ impl Fahrt {
     pub fn new(client_start_time: String) -> Self {
         Self {
             client_start_time,
-            start_time: std::time::Instant::now(),
-            inactive_time: std::time::Duration::from_secs(0),
+            active_time: std::time::Duration::from_secs(0),
             last_gps_update: std::time::Instant::now(),
             paused: true,
             schlag_count: 0,
@@ -54,7 +52,7 @@ impl Fahrt {
             paused: self.paused,
             schlag_count: self.schlag_count,
             distance_traveled: self.distance_traveled,
-            active_time: self.start_time.elapsed() - self.inactive_time,
+            active_time: self.active_time,
         }
     }
 
@@ -64,7 +62,7 @@ impl Fahrt {
             schlag_count: self.schlag_count,
             distance_traveled: self.distance_traveled,
             gps_history: self.gps_history,
-            active_time: self.start_time.elapsed() - self.inactive_time,
+            active_time: self.active_time,
         }
     }
 
@@ -85,9 +83,10 @@ impl Fahrt {
         self.paused = velocity <= 0.1;
         if self.paused {
             self.last_position = None;
-            self.inactive_time += delta; 
             return;
         } 
+
+        self.active_time += delta; 
 
         // Add GPS position to history 
         if self.last_history_update.elapsed() >= std::time::Duration::from_secs(15) {
