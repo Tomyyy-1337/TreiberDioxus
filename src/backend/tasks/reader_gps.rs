@@ -1,13 +1,21 @@
-#[cfg(feature = "server")]
-use crate::SateliteCount;
+use futures::StreamExt;
+use tokio::{sync::watch, pin};
 
-#[cfg(feature = "server")]
-pub async fn read_gps_task(gps_sender: tokio::sync::watch::Sender<SateliteCount>) {
-    loop {
-        use crate::SateliteCount;
+use crate::{SateliteCount, backend::hardware_interface::gps_interface::{GPSMessage, GPSModule}};
 
-        let new_count = (gps_sender.borrow().count + 1) % 16;
-        let _ = gps_sender.send(SateliteCount { count: new_count });
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+pub async fn read_gps_task(gps_sender: watch::Sender<SateliteCount>) {
+    let mut gps_module = GPSModule::new();
+    let gps_stream = gps_module.messages_stream().await;
+    pin!(gps_stream);
+
+    while let Some(message) = gps_stream.next().await {
+        match message {
+            GPSMessage::GGA { satellites } => {
+                let _ = gps_sender.send(SateliteCount { count: satellites as u8 });
+            }
+            GPSMessage::RMC { latitude, longitude, speed_kmh } => {
+
+            }
+        }
     }
 }
