@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::{GpsPosition, frontend::{components::map::RouteMap, frondend_data::{Fahrtenbuch, Indexed}}};
+use crate::{frontend::{components::map::RouteMap, frondend_data::{Fahrtenbuch, Indexed}}};
 
 #[component]
 pub fn FahrtenbuchEintrag(index: usize) -> Element {
@@ -9,16 +9,22 @@ pub fn FahrtenbuchEintrag(index: usize) -> Element {
     let eintrag = fahrtenbuch().entries.iter().find(|Indexed{index: i, ..}| *i == index).cloned();
 
     if let Some(Indexed { index, value }) = eintrag {
-        let mut test_eintrag = value.clone();
-        test_eintrag.gps_history.push(GpsPosition { latitude: 49.0, longitude: 8.0 });
-        test_eintrag.gps_history.push(GpsPosition { latitude: 50.0, longitude: 9.0 });
-
-
         rsx!(
             div {
                 class: "grid gap-3",
                 h1 { "Fahrtenbuch Eintrag {index}" }
-                RouteMap { positions: test_eintrag.gps_history.clone() }
+
+                div {
+                    class: "h-80 w-full",
+                    if value.gps_history.len() >= 2 {
+                        RouteMap { positions: value.gps_history.clone() }
+                    } else {
+                        div {
+                            class: "flex h-full w-full items-center justify-center rounded-2xl border border-border bg-card text-sm",
+                            "Kein GPS-Verlauf vorhanden"
+                        }
+                    }
+                }
             }
         )
     } else {

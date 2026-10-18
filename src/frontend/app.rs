@@ -39,6 +39,11 @@ pub fn App() -> Element {
     
     use_websocket_listener(fahrtenbuch);
 
+    use_effect(|| {
+        let connected = *WEBSOCKET_CONNECTED.read();
+        document::eval(&format!("window.routeMapDirect = {};", !connected));
+    });
+
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS },

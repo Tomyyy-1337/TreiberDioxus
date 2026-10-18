@@ -3,6 +3,7 @@
 const PMTILES_FILES = ["germany.pmtiles"];
 
 const routeMaps = new Map();
+const interactive = new Set();
 let librariesPromise = null;
 
 function loadScript(src) {
@@ -15,7 +16,7 @@ function loadScript(src) {
     });
 }
 
-// Reads PMTiles byte ranges through the Rust bridge, because the page cannot fetch plain http.
+// Reads PMTiles byte ranges directly when offline, otherwise through the Rust bridge.
 class BridgeSource {
     constructor(key) {
         this.key = key;
@@ -26,6 +27,15 @@ class BridgeSource {
     }
 
     async getBytes(offset, length) {
+        if (window.routeMapDirect) {
+            const response = await fetch(`https://maps.passberg.net/${this.key}`, {
+                headers: { Range: `bytes=${offset}-${offset + length - 1}` },
+            });
+            if (response.status !== 206) {
+                throw new Error(`range request failed: ${response.status}`);
+            }
+            return { data: await response.arrayBuffer() };
+        }
         while (!window.routeMapBridge) {
             await new Promise((resolve) => setTimeout(resolve, 50));
         }
@@ -84,6 +94,8 @@ export async function showRoute(id, positions, theme, urls) {
         return;
     }
 
+    applyInteractive(id);
+
     let entry = routeMaps.get(id);
     if (!entry) {
         const map = new maplibre.Map({
@@ -93,9 +105,13 @@ export async function showRoute(id, positions, theme, urls) {
             zoom: 5,
             attributionControl: false,
         });
-        map.addControl(new maplibre.NavigationControl({ showCompass: false }), "top-right");
         map.on("error", (e) => showError(id, e.error ?? e));
-        entry = { map, ready: new Promise((resolve) => map.once("style.load", resolve)) };
+        entry = {
+            map,
+            nav: new maplibre.NavigationControl({ showCompass: false }),
+            navShown: false,
+            ready: new Promise((resolve) => map.once("style.load", resolve)),
+        };
         routeMaps.set(id, entry);
     }
     await entry.ready;
@@ -104,11 +120,8 @@ export async function showRoute(id, positions, theme, urls) {
     style.applyThemeToMap(map, PMTILES_FILES, theme);
     map.getSource("waypoint-path").setData(routeGeoJson(positions));
 
-    if (positions.length > 0) {
-        const bounds = new maplibre.LngLatBounds();
-        positions.forEach((p) => bounds.extend([p.longitude, p.latitude]));
-        map.fitBounds(bounds, { padding: 40, maxZoom: 15, duration: 0 });
-    }
+    entry.positions = positions;
+    fitRoute(map, positions);
 }
 
 function showError(id, err) {
@@ -128,6 +141,48 @@ function showError(id, err) {
     box.textContent = `Map error: ${err?.message ?? err}`;
 }
 
+function fitRoute(map, positions) {
+    if (positions.length === 0) {
+        return;
+    }
+    const lngs = positions.map((p) => p.longitude);
+    const lats = positions.map((p) => p.latitude);
+    map.fitBounds(
+        [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+        { padding: 40, maxZoom: 15, duration: 0 },
+    );
+}
+
+// Pointer events are off outside fullscreen so the map cannot be panned or zoomed there.
+function applyInteractive(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.pointerEvents = interactive.has(id) ? "auto" : "none";
+    }
+}
+
+export function setInteractive(id, enabled) {
+    if (enabled) {
+        interactive.add(id);
+    } else {
+        interactive.delete(id);
+    }
+    applyInteractive(id);
+    const entry = routeMaps.get(id);
+    if (entry && entry.navShown !== enabled) {
+        entry.navShown = enabled;
+        if (enabled) {
+            entry.map.addControl(entry.nav, "top-right");
+        } else {
+            entry.map.removeControl(entry.nav);
+        }
+    }
+    if (entry) {
+        entry.map.resize();
+        fitRoute(entry.map, entry.positions ?? []);
+    }
+}
+
 export function disposeRoute(id) {
     const entry = routeMaps.get(id);
     if (entry) {
@@ -137,4 +192,4 @@ export function disposeRoute(id) {
 }
 
 // Exposed for the eval scripts, which cannot resolve module URLs.
-window.routeMap = { showRoute, disposeRoute };
+window.routeMap = { showRoute, disposeRoute, setInteractive };

@@ -28,7 +28,10 @@ pub fn BackButton() -> Element {
     use_future(move || async move {
         let mut popstate = document::eval("window.addEventListener('popstate', () => dioxus.send('back'));");
         while popstate.recv::<String>().await.is_ok() {
-            if nav.can_go_back() {
+            if *crate::frontend::components::map::MAP_FULLSCREEN.peek() {
+                *crate::frontend::components::map::MAP_FULLSCREEN.write() = false;
+                document::eval("history.pushState(null, '', location.href);");
+            } else if nav.can_go_back() {
                 skip_push.set(true);
                 nav.go_back();
             } else {

@@ -17,6 +17,12 @@ pub fn RouteMap(positions: ReadSignal<Vec<GpsPosition>>) -> Element {
             let _ = dioxus::core::spawn_forever(run_map_bridge());
         }
     });
+    let is_full = *MAP_FULLSCREEN.read();
+    let interactive_id = id.clone();
+    use_effect(move || {
+        let on = *MAP_FULLSCREEN.read();
+        document::eval(&format!(r#"window.routeMap?.setInteractive("{interactive_id}", {on});"#));
+    });
     let effect_id = id.clone();
     use_effect(move || {
         let eval = document::eval(SHOW_ROUTE_JS);
@@ -35,17 +41,47 @@ pub fn RouteMap(positions: ReadSignal<Vec<GpsPosition>>) -> Element {
         ));
     });
 
+    let icon_path = if is_full { "M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" } else { "M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" };
+    let title = if is_full { "Exit fullscreen" } else { "Fullscreen" };
     rsx! {
         document::Link { rel: "stylesheet", href: MAP_CSS }
         div {
-            id: "{id}",
-            class: "h-80 w-full overflow-hidden rounded-2xl border border-border",
+            class: if is_full {
+                "fixed inset-0 z-50 bg-background"
+            } else {
+                "relative h-full w-full overflow-hidden rounded-2xl border border-border"
+            },
+            div {
+                id: "{id}",
+                class: "h-full w-full",
+            }
+            div {
+                class: "maplibregl-ctrl maplibregl-ctrl-group",
+                style: "position: absolute; right: 10px; bottom: 10px; z-index: 20;",
+                button {
+                    title: "{title}",
+                    style: "display: flex; align-items: center; justify-content: center; width: 29px; height: 29px; padding: 0; color: #333;",
+                    onclick: move |_| *MAP_FULLSCREEN.write() = !is_full,
+                    svg {
+                        width: "18",
+                        height: "18",
+                        view_box: "0 0 24 24",
+                        fill: "none",
+                        stroke: "currentColor",
+                        stroke_width: "2",
+                        stroke_linecap: "round",
+                        path { d: "{icon_path}" }
+                    }
+                }
+            }
         }
     }
 }
 
 static MAP_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static MAP_BRIDGE_STARTED: AtomicBool = AtomicBool::new(false);
+/// Whether a route map is fullscreen; read by the Android back handler.
+pub static MAP_FULLSCREEN: GlobalSignal<bool> = GlobalSignal::new(|| false);
 
 
 /// Serves PMTiles byte-range reads from the page: each request is sent to Rust and answered in order.
