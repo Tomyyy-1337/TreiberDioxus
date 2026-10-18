@@ -9,6 +9,20 @@ pub struct FinishedFahrt {
     pub active_time: std::time::Duration,
 }
 
+impl FinishedFahrt {
+    pub fn active_time_string(&self) -> String {
+        let seconds = self.active_time.as_secs();
+        let seconds = seconds % 60;
+        let minutes = (self.active_time.as_secs() / 60) % 60;
+        let hours = self.active_time.as_secs() / 3600;
+        if hours > 0 {
+            format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
+        } else {
+            format!("{:02}:{:02}", minutes, seconds)
+        }
+    }
+}
+
 #[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct FahrtInfo {
     pub paused: bool,

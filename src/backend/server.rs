@@ -36,8 +36,8 @@ pub fn start_server() {
             tokio::spawn(update_camera_task(camera_interface_receiver.clone()));
             
             // Nedded only for dioxus cli commands
-            // let addr = dioxus::cli_config::fullstack_address_or_localhost();
-            let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+            let addr = dioxus::cli_config::fullstack_address_or_localhost();
+            // let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
             let router = axum::Router::new()
                 .serve_dioxus_application(
                     dioxus::server::ServeConfig::builder(),

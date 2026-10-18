@@ -1,8 +1,7 @@
-use dioxus::logger::tracing::info;
 use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, fmt::Display};
 
-use crate::{FahrtInfo, FinishedFahrt};
+use crate::{FinishedFahrt};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Theme {
@@ -28,7 +27,7 @@ const MAX_ENTRIES: usize = 100;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Fahrtenbuch {
-    pub next_index: u64,
+    pub next_index: usize,
     pub entries: VecDeque<Indexed<FinishedFahrt>>,
 }
 
@@ -55,6 +54,6 @@ impl Fahrtenbuch {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Indexed<T> {
-    pub index: u64,
+    pub index: usize,
     pub value: T,
 }

@@ -38,6 +38,7 @@ pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<()
         camera_interface.0.mark_changed();
         fahrt_info.0.mark_changed();
         current_stats.0.mark_changed();
+        finished_fahrt.0.mark_unchanged();
 
         loop {
             let message = tokio::select! {

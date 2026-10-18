@@ -11,6 +11,7 @@
 html,
 body {
   scrollbar-width: none;
+  background-color: var(--background);
 }
 
 html::-webkit-scrollbar,
@@ -54,7 +55,8 @@ body::-webkit-scrollbar {
   --muted-foreground: oklch(0.55 0.015 260);
 }
 
-.dark {
+.dark,
+:root:has(.dark) {
   --background: oklch(0.17 0.012 260);
   --foreground: oklch(0.93 0.006 260);
   --card: oklch(0.22 0.012 260);
