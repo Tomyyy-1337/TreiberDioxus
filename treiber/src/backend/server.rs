@@ -44,7 +44,6 @@ pub fn start_server() {
                     App
                 )
                 .layer(CompressionLayer::new().gzip(true).quality(CompressionLevel::Default).compress_when(SizeAbove::new(1024)))
-                .nest_service("/maps", ServeDir::new("maps"))
                 // used by websocket
                 .layer(Extension(battery_receiver))
                 // used by websocket

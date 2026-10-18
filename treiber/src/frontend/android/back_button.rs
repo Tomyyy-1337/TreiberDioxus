@@ -10,9 +10,11 @@ pub fn BackButton() -> Element {
     let route = use_route::<Route>();
     let mut skip_push = use_signal(|| false);
     let mut mounted = use_signal(|| false);
+    let mut at_root = use_signal(|| true);
 
     use_effect(use_reactive!(|route| {
         let _ = &route;
+        at_root.set(matches!(&route, Route::Camera {}));
         if !*mounted.peek() {
             mounted.set(true);
             document::eval("history.pushState(null, '', location.href);");
@@ -34,6 +36,8 @@ pub fn BackButton() -> Element {
             } else if nav.can_go_back() {
                 skip_push.set(true);
                 nav.go_back();
+            } else if !*at_root.peek() {
+                nav.replace(Route::Camera {});
             } else {
                 document::eval("history.pushState(null, '', location.href);");
             }

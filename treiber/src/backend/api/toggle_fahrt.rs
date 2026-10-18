@@ -61,8 +61,13 @@ impl Fahrt {
             client_start_time: self.client_start_time,
             schlag_count: self.schlag_count,
             distance_traveled: self.distance_traveled,
-            gps_history: self.gps_history,
             active_time: self.active_time,
+            // gps_history: self.gps_history,
+            gps_history: vec![
+                GpsPosition { latitude: 47.789, longitude: 11.123 },
+                GpsPosition { latitude: 47.790, longitude: 11.124 },
+                GpsPosition { latitude: 47.791, longitude: 11.123 },
+            ]
         }
     }
 

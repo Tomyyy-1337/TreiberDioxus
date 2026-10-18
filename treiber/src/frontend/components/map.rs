@@ -6,6 +6,22 @@ use crate::GpsPosition;
 use crate::backend::api::map_range::map_range;
 use crate::frontend::frondend_data::Theme;
 
+static MAP_COUNTER: AtomicUsize = AtomicUsize::new(0);
+static MAP_BRIDGE_STARTED: AtomicBool = AtomicBool::new(false);
+/// Whether a route map is fullscreen; read by the Android back handler.
+pub static MAP_FULLSCREEN: GlobalSignal<bool> = GlobalSignal::new(|| false);
+
+/// Order matches the destructuring in `SHOW_ROUTE_JS`.
+const MAP_ASSETS: [Asset; 5] = [
+    asset!("/assets/map/map_view.js", AssetOptions::js()),
+    asset!("/assets/map/map_style.js", AssetOptions::js()),
+    asset!("/assets/map/maplibre-gl.mjs", AssetOptions::js()),
+    asset!("/assets/map/pmtiles.js", AssetOptions::js()),
+    asset!("/assets/map/maplibre-gl-worker.mjs", AssetOptions::js()),
+];
+
+const MAP_CSS: Asset = asset!("/assets/map/maplibre-gl.css");
+
 /// Interactive map that draws the given GPS positions as a red line.
 #[component]
 pub fn RouteMap(positions: ReadSignal<Vec<GpsPosition>>) -> Element {
@@ -78,11 +94,36 @@ pub fn RouteMap(positions: ReadSignal<Vec<GpsPosition>>) -> Element {
     }
 }
 
-static MAP_COUNTER: AtomicUsize = AtomicUsize::new(0);
-static MAP_BRIDGE_STARTED: AtomicBool = AtomicBool::new(false);
-/// Whether a route map is fullscreen; read by the Android back handler.
-pub static MAP_FULLSCREEN: GlobalSignal<bool> = GlobalSignal::new(|| false);
+const SHOW_ROUTE_JS: &str = r#"
+const [id, positions, theme, assets] = await dioxus.recv();
+const [viewUrl, styleUrl, maplibreUrl, pmtilesUrl, workerUrl] = assets;
+try {
+    window.routeMapLoading ??= new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.type = "module";
+        script.src = viewUrl;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("could not load " + viewUrl));
+        document.head.appendChild(script);
+    });
+    await window.routeMapLoading;
+    await window.routeMap.showRoute(id, positions, theme, { styleUrl, maplibreUrl, pmtilesUrl, workerUrl });
+} catch (err) {
+    console.error("route map failed", err);
+    const el = document.getElementById(id);
+    if (el) el.textContent = `Map failed to load: ${err}`;
+}
+"#;
 
+async fn run_map_bridge() {
+    let mut eval = document::eval(MAP_BRIDGE_JS);
+    while let Ok((offset, length)) = eval.recv::<(u64, u64)>().await {
+        let response = map_range(offset, length).await.map_err(|err| err.to_string());
+        if eval.send(response).is_err() {
+            break;
+        }
+    }
+}
 
 /// Serves PMTiles byte-range reads from the page: each request is sent to Rust and answered in order.
 const MAP_BRIDGE_JS: &str = r#"
@@ -102,47 +143,5 @@ if (!window.routeMapBridge) {
         if (response.Err) request.reject(new Error(response.Err));
         else request.resolve(new Uint8Array(response.Ok).buffer);
     }
-}
-"#;
-
-async fn run_map_bridge() {
-    let mut eval = document::eval(MAP_BRIDGE_JS);
-    while let Ok((offset, length)) = eval.recv::<(u64, u64)>().await {
-        let response = map_range(offset, length).await.map_err(|err| err.to_string());
-        if eval.send(response).is_err() {
-            break;
-        }
-    }
-}
-
-/// Order matches the destructuring in `SHOW_ROUTE_JS`.
-const MAP_ASSETS: [Asset; 5] = [
-    asset!("/assets/map/map_view.js", AssetOptions::js()),
-    asset!("/assets/map/map_style.js", AssetOptions::js()),
-    asset!("/assets/map/maplibre-gl.mjs", AssetOptions::js()),
-    asset!("/assets/map/pmtiles.js", AssetOptions::js()),
-    asset!("/assets/map/maplibre-gl-worker.mjs", AssetOptions::js()),
-];
-
-const MAP_CSS: Asset = asset!("/assets/map/maplibre-gl.css");
-
-const SHOW_ROUTE_JS: &str = r#"
-const [id, positions, theme, assets] = await dioxus.recv();
-const [viewUrl, styleUrl, maplibreUrl, pmtilesUrl, workerUrl] = assets;
-try {
-    window.routeMapLoading ??= new Promise((resolve, reject) => {
-        const script = document.createElement("script");
-        script.type = "module";
-        script.src = viewUrl;
-        script.onload = resolve;
-        script.onerror = () => reject(new Error("could not load " + viewUrl));
-        document.head.appendChild(script);
-    });
-    await window.routeMapLoading;
-    await window.routeMap.showRoute(id, positions, theme, { styleUrl, maplibreUrl, pmtilesUrl, workerUrl });
-} catch (err) {
-    console.error("route map failed", err);
-    const el = document.getElementById(id);
-    if (el) el.textContent = `Map failed to load: ${err}`;
 }
 "#;
