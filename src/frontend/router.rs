@@ -28,7 +28,6 @@ pub enum Route {
         SettingsAnzeige {},
         #[route("/fahrtenbuch_eintrag/:index")]
         FahrtenbuchEintrag { index: usize },
-
     #[end_layout]
 
     #[route("/:..segments", NotFound)]

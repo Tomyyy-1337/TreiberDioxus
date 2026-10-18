@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 
 use dioxus::{server::{DioxusRouterExt, axum::{self, Extension}}};
 use tokio::{runtime::LocalOptions, sync::watch};
-use tower_http::{CompressionLevel, compression::{CompressionLayer, predicate::SizeAbove}};
+use tower_http::{CompressionLevel, compression::{CompressionLayer, predicate::SizeAbove}, cors::{Any, CorsLayer}, services::ServeDir};
 
 use crate::{BatteryState, CameraInterface, CurrentBpm, CurrentStats, FahrtInfo, FinishedFahrt, SateliteCount, backend::{api::toggle_fahrt::Fahrt, hardware_interface::i2c_interface::I2cInterface, tasks::{reader_accelerometer::read_accelerometer_task, reader_battery::read_battery_task, reader_gps::{Velocity, read_gps_task}, send_current_stats::send_current_stats_task, send_fahrt_info::send_fahrt_task, update_camera::update_camera_task}}, frontend::app::App};
 
@@ -36,14 +36,15 @@ pub fn start_server() {
             tokio::spawn(update_camera_task(camera_interface_receiver.clone()));
             
             // Nedded only for dioxus cli commands
-            let addr = dioxus::cli_config::fullstack_address_or_localhost();
-            // let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+            // let addr = dioxus::cli_config::fullstack_address_or_localhost();
+            let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
             let router = axum::Router::new()
                 .serve_dioxus_application(
                     dioxus::server::ServeConfig::builder(),
                     App
                 )
                 .layer(CompressionLayer::new().gzip(true).quality(CompressionLevel::Default).compress_when(SizeAbove::new(1024)))
+                .nest_service("/maps", ServeDir::new("maps"))
                 // used by websocket
                 .layer(Extension(battery_receiver))
                 // used by websocket
