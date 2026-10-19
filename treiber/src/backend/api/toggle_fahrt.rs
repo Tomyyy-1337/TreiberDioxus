@@ -4,24 +4,24 @@ use dioxus::server::axum::Extension;
 #[cfg(feature = "server")]
 use tokio::sync::watch;
 
-use crate::{FahrtInfo, FinishedFahrt, GpsPosition};
+use crate::{FahrtInfo, FinishedFahrt, GpsPosition, SerializableDateTime};
 
 #[post("/api/toggle_fahrt", fahrt: Extension<watch::Sender<Option<Fahrt>>>, finished_fahrt: Extension<watch::Sender<FinishedFahrt>>)]
-pub async fn toggle_fahrt(client_time: String) -> Result<()> {
+pub async fn toggle_fahrt(time: SerializableDateTime) -> Result<()> {
     fahrt.send_modify(|fahrt| {
         *fahrt = match fahrt.take() {
             Some(fahrt) => {
                 let _ = finished_fahrt.send(fahrt.finish());
                 None
             },
-            None => Some(Fahrt::new(client_time))
+            None => Some(Fahrt::new(time))
         }
     });
     return Ok(());
 }
 
 pub struct Fahrt {
-    pub client_start_time: String,
+    pub client_start_time: SerializableDateTime,
     pub active_time: std::time::Duration,
     pub last_gps_update: std::time::Instant,
     pub paused: bool,
@@ -33,7 +33,7 @@ pub struct Fahrt {
 }
 
 impl Fahrt {
-    pub fn new(client_start_time: String) -> Self {
+    pub fn new(client_start_time: SerializableDateTime) -> Self {
         Self {
             client_start_time,
             active_time: std::time::Duration::from_secs(0),

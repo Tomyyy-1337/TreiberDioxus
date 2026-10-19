@@ -26,13 +26,11 @@ pub fn Camera() -> Element {
         }
 
         button {
-            onclick: move |_| {
-                let current_time = chrono::Local::now()
-                    .format_localized("%A, %e. %B %Y %H:%M:%S", chrono::format::Locale::de_DE)
-                    .to_string();
+            onclick: move |_| {                
+                let current_time = chrono::Local::now();
                 
                 spawn(async move { 
-                    let  _ = toggle_fahrt(current_time).await;
+                    let  _ = toggle_fahrt(current_time.into()).await;
                 });
             },
             "Toggle Fahrt"
