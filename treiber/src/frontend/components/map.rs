@@ -1,13 +1,11 @@
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use dioxus::prelude::*;
 
 use crate::GpsPosition;
-use crate::backend::api::map_range::map_range;
 use crate::frontend::frondend_data::Theme;
 
 static MAP_COUNTER: AtomicUsize = AtomicUsize::new(0);
-static MAP_BRIDGE_STARTED: AtomicBool = AtomicBool::new(false);
 /// Whether a route map is fullscreen; read by the Android back handler.
 pub static MAP_FULLSCREEN: GlobalSignal<bool> = GlobalSignal::new(|| false);
 
@@ -22,17 +20,18 @@ const MAP_ASSETS: [Asset; 5] = [
 
 const MAP_CSS: Asset = asset!("/assets/map/maplibre-gl.css");
 
+/// On Android the WebView origin is not the server, so range requests need the absolute URL.
+#[cfg(target_os = "android")]
+const SERVER_BASE: &str = crate::SERVER_URL;
+#[cfg(not(target_os = "android"))]
+const SERVER_BASE: &str = "";
+
 /// Interactive map that draws the given GPS positions as a red line.
 #[component]
 pub fn RouteMap(positions: ReadSignal<Vec<GpsPosition>>) -> Element {
     let id = use_hook(|| format!("route-map-{}", MAP_COUNTER.fetch_add(1, Ordering::Relaxed)));
 
     let theme = use_context::<Signal<Theme>>();
-    use_hook(|| {
-        if !MAP_BRIDGE_STARTED.swap(true, Ordering::SeqCst) {
-            let _ = dioxus::core::spawn_forever(run_map_bridge());
-        }
-    });
     let is_full = *MAP_FULLSCREEN.read();
     let interactive_id = id.clone();
     use_effect(move || {
@@ -47,6 +46,7 @@ pub fn RouteMap(positions: ReadSignal<Vec<GpsPosition>>) -> Element {
             positions(),
             theme().to_string(),
             MAP_ASSETS.map(|a| a.to_string()),
+            SERVER_BASE.to_string(),
         ));
     });
 
@@ -77,7 +77,9 @@ pub fn RouteMap(positions: ReadSignal<Vec<GpsPosition>>) -> Element {
                 button {
                     title: "{title}",
                     style: "display: flex; align-items: center; justify-content: center; width: 29px; height: 29px; padding: 0; color: #333;",
-                    onclick: move |_| *MAP_FULLSCREEN.write() = !is_full,
+                    onclick: move |_| {
+                        *MAP_FULLSCREEN.write() = !is_full;
+                    },
                     svg {
                         width: "18",
                         height: "18",
@@ -95,8 +97,9 @@ pub fn RouteMap(positions: ReadSignal<Vec<GpsPosition>>) -> Element {
 }
 
 const SHOW_ROUTE_JS: &str = r#"
-const [id, positions, theme, assets] = await dioxus.recv();
+const [id, positions, theme, assets, serverUrl] = await dioxus.recv();
 const [viewUrl, styleUrl, maplibreUrl, pmtilesUrl, workerUrl] = assets;
+window.routeMapServerUrl = serverUrl;
 try {
     window.routeMapLoading ??= new Promise((resolve, reject) => {
         const script = document.createElement("script");
@@ -115,33 +118,56 @@ try {
 }
 "#;
 
-async fn run_map_bridge() {
-    let mut eval = document::eval(MAP_BRIDGE_JS);
-    while let Ok((offset, length)) = eval.recv::<(u64, u64)>().await {
-        let response = map_range(offset, length).await.map_err(|err| err.to_string());
-        if eval.send(response).is_err() {
-            break;
+/// Installs `window.routeMapRangeRequest` and answers requests coming from Rust.
+const RANGE_BRIDGE_JS: &str = r#"
+const pendingRanges = new Map();
+let nextRangeId = 0;
+window.routeMapRangeRequest = (key, offset, length) => new Promise((resolve, reject) => {
+    const id = nextRangeId++;
+    pendingRanges.set(id, { resolve, reject });
+    dioxus.send([id, key, offset, length]);
+});
+while (true) {
+    const [id, bytes] = await dioxus.recv();
+    const pending = pendingRanges.get(id);
+    pendingRanges.delete(id);
+    if (!pending) continue;
+    if (bytes === null) pending.reject(new Error("native range request failed"));
+    else pending.resolve(new Uint8Array(bytes).buffer);
+}
+"#;
+
+/// Serves PMTiles range reads over native HTTP, which is not subject to WebView mixed-content rules.
+/// Only active on Android; runs for the lifetime of `App`.
+pub async fn run_range_bridge() {
+    #[cfg(target_os = "android")]
+    {
+        let client = reqwest::Client::new();
+        let mut eval = document::eval(RANGE_BRIDGE_JS);
+        while let Ok((id, key, offset, length)) = eval.recv::<(u64, String, u64, u64)>().await {
+            let bytes = fetch_range(&client, &key, offset, length).await;
+            let _ = eval.send((id, bytes));
         }
     }
 }
 
-/// Serves PMTiles byte-range reads from the page: each request is sent to Rust and answered in order.
-const MAP_BRIDGE_JS: &str = r#"
-if (!window.routeMapBridge) {
-    const pending = [];
-    window.routeMapBridge = {
-        read(offset, length) {
-            return new Promise((resolve, reject) => {
-                pending.push({ resolve, reject });
-                dioxus.send([offset, length]);
-            });
-        },
-    };
-    while (true) {
-        const response = await dioxus.recv();
-        const request = pending.shift();
-        if (response.Err) request.reject(new Error(response.Err));
-        else request.resolve(new Uint8Array(response.Ok).buffer);
+/// Requests `/maps/{key}` from the server with a byte range and returns the body.
+#[cfg(target_os = "android")]
+async fn fetch_range(client: &reqwest::Client, key: &str, offset: u64, length: u64) -> Option<Vec<u8>> {
+    if length == 0 {
+        return Some(Vec::new());
     }
+    let response = client
+        .get(format!("{}/maps/{key}", crate::SERVER_URL))
+        .header(
+            reqwest::header::RANGE,
+            format!("bytes={}-{}", offset, offset + length - 1),
+        )
+        .send()
+        .await
+        .ok()?;
+    if response.status() != reqwest::StatusCode::PARTIAL_CONTENT {
+        return None;
+    }
+    Some(response.bytes().await.ok()?.to_vec())
 }
-"#;

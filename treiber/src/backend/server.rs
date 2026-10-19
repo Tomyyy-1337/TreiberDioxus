@@ -43,6 +43,7 @@ pub fn start_server() {
                     dioxus::server::ServeConfig::builder(),
                     App
                 )
+                .nest_service("/maps", ServeDir::new("maps"))
                 .layer(CompressionLayer::new().gzip(true).quality(CompressionLevel::Default).compress_when(SizeAbove::new(1024)))
                 // used by websocket
                 .layer(Extension(battery_receiver))

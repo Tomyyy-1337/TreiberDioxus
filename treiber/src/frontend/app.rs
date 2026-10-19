@@ -39,6 +39,10 @@ pub fn App() -> Element {
     
     use_websocket_listener(fahrtenbuch);
 
+    use_future(move || async move {
+        crate::frontend::components::map::run_range_bridge().await;
+    });
+
     use_effect(|| {
         let connected = *WEBSOCKET_CONNECTED.read();
         document::eval(&format!("window.routeMapDirect = {};", !connected));

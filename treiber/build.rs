@@ -8,8 +8,7 @@ const PUBLIC_ASSETS: &[&str] = &[
 ];
 
 fn main() {
-    println!("cargo:rerun-if-changed=styles.css");
-    println!("cargo:rerun-if-changed=src");
+    println!("cargo:rerun-if-changed=build.rs");
     download_public_assets().expect("Failed to download public assets");
 }
 

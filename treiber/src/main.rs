@@ -23,8 +23,8 @@ fn main() {
 #[cfg(target_os = "android")]
 const SERVER_URL: &str = match option_env!("ANDROID_SERVER_URL") {
     Some(url) => url,
-    // None => "http://10.0.2.2:8080",
-    None => "http://192.168.178.77:8080",
+    None => "http://10.0.2.2:8080",
+    // None => "http://192.168.178.77:8080", // Local network IP for testing on a physical device
 };
 
 /// App-private internal storage; writable without runtime permissions. Must match the Android `applicationId`.

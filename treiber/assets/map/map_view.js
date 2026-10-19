@@ -16,8 +16,8 @@ function loadScript(src) {
     });
 }
 
-// Reads PMTiles byte ranges directly when offline, otherwise through the Rust bridge.
-class BridgeSource {
+// Reads PMTiles byte ranges from /maps, or from the public host when offline.
+class RangeSource {
     constructor(key) {
         this.key = key;
     }
@@ -27,20 +27,27 @@ class BridgeSource {
     }
 
     async getBytes(offset, length) {
-        if (window.routeMapDirect) {
-            const response = await fetch(`https://maps.passberg.net/${this.key}`, {
+        if (!window.routeMapDirect && window.routeMapRangeRequest) {
+            try {
+                return { data: await window.routeMapRangeRequest(this.key, offset, length) };
+            } catch (error) {
+                throw new Error(`native range request for ${this.key} failed: ${error.message}`);
+            }
+        }
+        const base = window.routeMapDirect ? "https://maps.passberg.net" : `${window.routeMapServerUrl ?? ""}/maps`;
+        const url = `${base}/${this.key}`;
+        let response;
+        try {
+            response = await fetch(url, {
                 headers: { Range: `bytes=${offset}-${offset + length - 1}` },
             });
-            if (response.status !== 206) {
-                throw new Error(`range request failed: ${response.status}`);
-            }
-            return { data: await response.arrayBuffer() };
+        } catch (error) {
+            throw new Error(`range fetch to ${url} from ${location.origin} failed: ${error.message}`);
         }
-        while (!window.routeMapBridge) {
-            await new Promise((resolve) => setTimeout(resolve, 50));
+        if (response.status !== 206) {
+            throw new Error(`range request failed: ${response.status}`);
         }
-        const data = await window.routeMapBridge.read(offset, length);
-        return { data };
+        return { data: await response.arrayBuffer() };
     }
 }
 
@@ -58,7 +65,7 @@ function loadLibraries(urls) {
             }
             const protocol = new window.pmtiles.Protocol();
             for (const file of PMTILES_FILES) {
-                protocol.add(new window.pmtiles.PMTiles(new BridgeSource(file)));
+                protocol.add(new window.pmtiles.PMTiles(new RangeSource(file)));
             }
             maplibre.addProtocol("pmtiles", protocol.tile);
             return { maplibre, style };
