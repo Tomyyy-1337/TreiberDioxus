@@ -51,6 +51,7 @@ pub fn FahrtenbuchEintrag(index: usize) -> Element {
                             }
                         }
                     }
+                    
                     div {
                         class: "flex items-baseline justify-between rounded-2xl border border-border bg-card px-4 py-3",
                         span { class: "text-xs uppercase tracking-wide text-muted-foreground", "Gesamtstrecke" }

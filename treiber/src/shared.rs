@@ -107,7 +107,7 @@ pub struct SerializableDateTime {
 
 impl SerializableDateTime {
     pub fn date_string(&self) -> String {
-        format!("{:02}. {:02}. {:04}", self.day, self.month, self.year)
+        format!("{:02}.{:02}.{:04}", self.day, self.month, self.year)
     }
 
     pub fn time_string(&self) -> String {
@@ -138,7 +138,7 @@ impl From<DateTime<Local>> for SerializableDateTime {
             year: dt.year() as u16,
             month: dt.month() as u8,
             day: dt.day() as u8,
-            hour: dt.hour() as u8 + 1,
+            hour: dt.hour() as u8,
             minute: dt.minute() as u8,
             second: dt.second() as u8,
         }
