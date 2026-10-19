@@ -59,6 +59,21 @@ pub struct CurrentBpm {
     pub bpm: f32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WlanSettings {
+    pub ssid: String,
+    pub password: String,
+}
+
+impl Default for WlanSettings {
+    fn default() -> Self {
+        WlanSettings {
+            ssid: "RuderCam".to_string(),
+            password: "1234".to_string()
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct CameraInterface {
     pub hdr_enabled: bool,

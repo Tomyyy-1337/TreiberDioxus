@@ -1,3 +1,4 @@
+use dioxus::prelude::*;
 #[cfg(target_os = "linux")] 
 use embedded_hal::i2c::I2c;
 #[cfg(target_os = "linux")] 
@@ -71,9 +72,39 @@ impl I2cInterface {
         .await
         .unwrap_or([0u8; N])
     }
+
+    pub async fn write_eeprom_async(&self, register: u16, data: Vec<u8>) {
+        let device = Arc::clone(&self.device);
+        tokio::task::spawn_blocking(move || {
+            const PAGE_SIZE: usize = 32;
+            let mut offset = 0;
+
+            let mut device = device.lock().unwrap();
+            let mut write_buffer = [0u8; PAGE_SIZE + 2];
+
+            while offset < data.len() {
+                let page_offset = (register as usize + offset) % PAGE_SIZE;
+                let page_remaining = PAGE_SIZE - page_offset;
+                let chunk_size = std::cmp::min(page_remaining, data.len() - offset);
+
+                write_buffer[0] = (register >> 8) as u8;
+                write_buffer[1] = register as u8;
+                write_buffer[2..2 + chunk_size].copy_from_slice(&data[offset..offset + chunk_size]);
+
+                let e = device.write(EEPROM_I2C_ADDRESS_MEMORY, &write_buffer[..2 + chunk_size]);
+                if let Err(err) = e {
+                    eprintln!("Error writing to EEPROM: {:?}", err);
+                }
+
+                offset += chunk_size;
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+        }).await.unwrap();
+    }
 }
 
 #[cfg(not(target_os = "linux"))]
+#[derive(Debug)]
 pub struct I2CError;
 
 #[cfg(target_os = "linux")]

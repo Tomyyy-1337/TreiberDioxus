@@ -9,6 +9,7 @@ edition = "2024"
 [dependencies]
 dioxus = { version = "0.7.1", features = ["router", "fullstack"] }
 serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0.154", optional = true }
 dioxus-sdk = { version = "0.7.0", features = ["storage"] }
 tokio = { version = "1.53.3", default-features = false, optional = true }
 tower = { version = "0.5.3", optional = true }
@@ -51,6 +52,7 @@ server = [
     "dep:tokio-serial",
     "dep:futures",
     "dep:async-stream",
+    "dep:serde_json",
 ]
 
 [build-dependencies]
