@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    backend::api::toggle_fahrt::toggle_fahrt, frontend::{
+    FahrtInfo, backend::api::toggle_fahrt::{Fahrt, toggle_fahrt}, frontend::{
         app::{CURRENT_STATS, FAHRT, WEBSOCKET_CONNECTED}, frondend_data::Theme, settings_pages::settings_camera::SettingsCameraComponent,
     },
 };
@@ -45,6 +45,13 @@ fn FahrtSection() -> Element {
                     spawn(async move {
                         let _ = toggle_fahrt(current_time.into()).await;
                     });
+
+                    // Update the local state to reflect the new Fahrt status instantly
+                    if FAHRT().is_some() {
+                        FAHRT().take();
+                    } else {
+                        *FAHRT.write() = Some(FahrtInfo::default());
+                    }
                 },
                 "{label}"
             }

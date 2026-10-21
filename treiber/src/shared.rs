@@ -24,7 +24,7 @@ impl FinishedFahrt {
     }
 }
 
-#[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct FahrtInfo {
     pub paused: bool,
     pub schlag_count: u32,

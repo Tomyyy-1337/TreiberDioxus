@@ -1,4 +1,8 @@
 use dioxus::{fullstack::{CborEncoding, WebSocketOptions, Websocket}, prelude::*};
+#[cfg(feature = "server")]
+use futures::StreamExt;
+#[cfg(feature = "server")]
+use tokio_stream::{wrappers::WatchStream};
 
 use crate::{BatteryState, CameraInterface, CurrentStats, FahrtInfo, FinishedFahrt, SateliteCount};
 
@@ -40,27 +44,23 @@ pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<()
         current_stats.0.mark_changed();
         finished_fahrt.0.mark_unchanged();
 
-        loop {
-            let message = tokio::select! {
-                _ = battery.0.changed() => {
-                    ServerMessage::BatteryUpdate(*battery.0.borrow())
-                }
-                _ = gps_count.0.changed() => {
-                    ServerMessage::GpsCountUpdate(*gps_count.0.borrow())
-                }
-                _ = camera_interface.0.changed() => {
-                    ServerMessage::SettingsCameraUpdate(*camera_interface.0.borrow())
-                }
-                _ = fahrt_info.0.changed() => {
-                    ServerMessage::FahrtUpdate(*fahrt_info.0.borrow())
-                }
-                _ = current_stats.0.changed() => {
-                    ServerMessage::CurrentStatsUpdate(*current_stats.0.borrow())
-                }
-                _ = finished_fahrt.0.changed() => {
-                    ServerMessage::FinishedFahrtUpdate(finished_fahrt.0.borrow().clone())
-                }
-            };
+        let battery_stream = WatchStream::from_changes(battery.0).map(ServerMessage::BatteryUpdate);
+        let gps_count_stream = WatchStream::from_changes(gps_count.0).map(ServerMessage::GpsCountUpdate);
+        let camera_interface_stream = WatchStream::from_changes(camera_interface.0).map(ServerMessage::SettingsCameraUpdate);
+        let fahrt_info_stream = WatchStream::from_changes(fahrt_info.0).map(ServerMessage::FahrtUpdate);
+        let current_stats_stream = WatchStream::from_changes(current_stats.0).map(ServerMessage::CurrentStatsUpdate);
+        let finished_fahrt_stream = WatchStream::from_changes(finished_fahrt.0).map(ServerMessage::FinishedFahrtUpdate);
+
+        let mut merged_stream = futures::stream::select_all([
+            battery_stream.boxed(),
+            gps_count_stream.boxed(),
+            camera_interface_stream.boxed(),
+            fahrt_info_stream.boxed(),
+            current_stats_stream.boxed(),
+            finished_fahrt_stream.boxed()
+        ]);
+
+        while let Some(message) = merged_stream.next().await {
             if socket.send(message).await.is_err() {
                 break;
             }

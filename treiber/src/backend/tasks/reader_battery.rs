@@ -15,10 +15,10 @@ pub async fn read_battery_task(battery_sender: watch::Sender<BatteryState>) {
 
         /// Check if the battery is critically low and shut down if necessary. Only on raspberry pi 
         #[cfg(target_os = "linux")]
-        if battery_status.battery_level <= 2 {
-            println!("Battery critically low ({}%m, {}V), shutting down...", battery_status.battery_level, battery_status.voltage);
+        if battery_percentage <= 2 {
+            println!("Battery critically low ({}%), shutting down...", battery_percentage);
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-            pi_interface::shutdown();
+            // pi_interface::shutdown();
         } 
 
     }
