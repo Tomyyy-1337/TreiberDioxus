@@ -7,4 +7,4 @@
 /assets/map/maplibre-gl-worker.mjs
 /assets/map/maplibre-gl.mjs
 /assets/map/pmtiles.js
-
+build/

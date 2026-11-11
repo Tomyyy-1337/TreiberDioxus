@@ -2,19 +2,21 @@
 ARG BUILD_PLATFORM=linux/amd64
 FROM --platform=${BUILD_PLATFORM} rust:latest AS builder
 
-RUN dpkg --add-architecture arm64 && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    dpkg --add-architecture arm64 && \
     apt-get update && apt-get install -y \
     gcc-aarch64-linux-gnu \
     g++-aarch64-linux-gnu \
     libc6-dev-arm64-cross \
     pkg-config \
-    libudev-dev:arm64 \
-    && rm -rf /var/lib/apt/lists/*
+    libudev-dev:arm64
 
 RUN rustup target add aarch64-unknown-linux-gnu wasm32-unknown-unknown
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    cargo install dioxus-cli --version "^0.7" --locked
+    --mount=type=cache,target=/var/cache/dx-install \
+    cargo install dioxus-cli --version "^0.7" --locked --target-dir /var/cache/dx-install
 
 ENV CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
 ENV CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++
@@ -39,6 +41,8 @@ ARG CARGO_PROFILE_RELEASE_CODEGEN_UNITS
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/app/target \
+    --mount=type=cache,target=/root/.cache \
+    --mount=type=cache,target=/root/.local/share/dioxus \
     rm -rf /app/target/dx/ruder_cam_beta/release/web && \
     dx bundle --release --web @server --server --target aarch64-unknown-linux-gnu && \
     mkdir -p /out && \
@@ -48,4 +52,4 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM scratch AS artifacts
 COPY --from=builder /out /
 
-# Use: docker build --target artifacts -o type=local,dest=./OUT_DIR .
+# Use: docker build --target artifacts -o type=local,dest=./build .

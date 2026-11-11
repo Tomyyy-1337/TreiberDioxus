@@ -1,5 +1,18 @@
 # Ruder Cam Treiber
 
+
+### Install dependencies:
+```bash
+sudo apt update
+sudo apt install libudev-dev pkg-config -y
+mkdir mediamtx
+cd mediamtx
+wget https://github.com/bluenviron/mediamtx/releases/download/v1.21.2/mediamtx_v1.21.2_linux_arm64.tar.gz
+tar -xvzf mediamtx_v1.21.2_linux_arm64.tar.gz
+rm mediamtx_v1.21.2_linux_arm64.tar.gz
+mkdir tmp
+```
+
 ## Pi Setup
 - Activate i2c in `raspi-config` 
 - Activate Serial Port in `raspi-config` (disable login shell over serial)
@@ -47,6 +60,65 @@ sudo systemctl start mediamtx.service
 ```
 
 Stream accessible at: `https://<your-pi-ip>:8889/stream/`
+
+```bash
+sudo nano /etc/systemd/system/update_service.service
+```
+
+```bash
+[Unit]
+Description=Update Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/update_service
+ExecStart=/home/pi/update_service/update_service
+Restart=always
+RestartSec=5
+User=root
+Environment=PATH=/usr/local/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable update_service.service
+sudo systemctl start update_service.service
+```
+
+### Backend Setup
+- Use the update service to update the backend on the pi
+
+```bash
+sudo nano /etc/systemd/system/backend.service
+```
+
+```bash
+[Unit]
+Description=Backend Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/treiber
+ExecStart=/home/pi/treiber/server
+Restart=always
+RestartSec=5
+User=root
+Environment=PATH=/usr/local/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable backend.service
+sudo systemctl start backend.service
+```
 
 
 

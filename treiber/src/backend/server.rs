@@ -4,13 +4,17 @@ use dioxus::{server::{DioxusRouterExt, axum::{self, Extension}}};
 use tokio::{runtime::LocalOptions, sync::watch};
 use tower_http::{CompressionLevel, compression::{CompressionLayer, predicate::SizeAbove}, cors::{Any, CorsLayer}, services::ServeDir};
 
-use crate::{BatteryState, CameraInterface, CurrentBpm, CurrentStats, FahrtInfo, FinishedFahrt, SateliteCount, WlanSettings, backend::{api::toggle_fahrt::Fahrt, hardware_interface::i2c_interface::I2cInterface, tasks::{reader_accelerometer::read_accelerometer_task, reader_battery::read_battery_task, reader_gps::{Velocity, read_gps_task}, save_config::save_config_task, send_current_stats::send_current_stats_task, send_fahrt_info::send_fahrt_task, update_camera::update_camera_task}}, frontend::app::App};
+use crate::{BatteryState, CameraInterface, CurrentBpm, CurrentStats, FahrtInfo, FinishedFahrt, SateliteCount, WlanSettings, backend::{api::toggle_fahrt::Fahrt, hardware_interface::{hotspot_interface::{self, Hotspot}, i2c_interface::I2cInterface}, tasks::{reader_accelerometer::read_accelerometer_task, reader_battery::read_battery_task, reader_gps::{Velocity, read_gps_task}, save_config::save_config_task, send_current_stats::send_current_stats_task, send_fahrt_info::send_fahrt_task, update_camera::update_camera_task}}, frontend::app::App};
 
 lazy_static::lazy_static! {
     pub static ref I2C_INTERFACE: I2cInterface = I2cInterface::new();
 }
 
 pub fn start_server() {
+    println!("Starting server...");
+    Hotspot::initialize("RuderCamBeta", "ObilanKenobi");
+    println!("Hotspot initialized successfully.");
+
     tokio::runtime::Builder::new_current_thread()
         .max_blocking_threads(4)
         .enable_all()
@@ -34,7 +38,7 @@ pub fn start_server() {
             tokio::spawn(send_current_stats_task(bpm_receiver, velocity_receiver, current_stats_sender));
             tokio::spawn(read_gps_task(gps_count_sender, velocity_sender, fahrt_sender.clone()));
             tokio::spawn(update_camera_task(camera_interface_receiver.clone()));
-            tokio::spawn(save_config_task(camera_interface_receiver.clone(), wlan_settings_receiver));
+            // tokio::spawn(save_config_task(camera_interface_receiver.clone(), wlan_settings_receiver));
 
             // Nedded only for dioxus cli commands
             // let addr = dioxus::cli_config::fullstack_address_or_localhost();
