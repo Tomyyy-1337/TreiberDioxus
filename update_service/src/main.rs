@@ -15,7 +15,8 @@ use tokio::sync::Mutex;
 
 type StepResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-const OUTPUTS: [&str; 2] = ["build/server", "build/public"];
+const OUTPUTS: [&str; 2] = ["treiber/server", "treiber/public"];
+const EXECUTABLE_OUTPUTS: [&str; 1] = ["treiber/server"];
 const HASH_HEADER: &str = "x-sha256";
 const STAGING_DIR_NAME: &str = ".update_staging";
 const DEFAULT_TREIBER_DIR: &str = "treiber";
@@ -51,6 +52,12 @@ fn extract_archive(data: &[u8], staging: &Path) -> StepResult<()> {
     Ok(())
 }
 
+fn make_executable(path: &Path) -> StepResult<()> {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o755))?;
+    Ok(())
+}
+
 fn replace_outputs(staging: &Path, treiber_dir: &Path) -> StepResult<()> {
     for rel in OUTPUTS {
         if !staging.join(rel).exists() {
@@ -60,6 +67,9 @@ fn replace_outputs(staging: &Path, treiber_dir: &Path) -> StepResult<()> {
     for rel in OUTPUTS {
         let new_path = staging.join(rel);
         let old_path = treiber_dir.join(rel);
+        if EXECUTABLE_OUTPUTS.contains(&rel) {
+            make_executable(&new_path)?;
+        }
         remove_path(&old_path)?;
         if let Some(parent) = old_path.parent() {
             fs::create_dir_all(parent)?;

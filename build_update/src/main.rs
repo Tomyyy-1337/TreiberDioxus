@@ -13,6 +13,8 @@ pub type StepResult<T> = Result<T, Box<dyn Error>>;
 
 const WEB_OUTPUT_REL: &str = "build/public";
 const SERVER_OUTPUT_REL: &str = "build/server";
+const PACKAGE_STAGING_REL: &str = "build/package";
+const ARCHIVE_ROOT: &str = "treiber";
 const ARCHIVE_NAME: &str = "treiber_update.tar.gz";
 const HASH_FILE_SUFFIX: &str = ".sha256";
 const LAST_WIFI_FILE_NAME: &str = "last_wifi.txt";
@@ -50,7 +52,7 @@ fn to_hex(bytes: &[u8]) -> String {
 
 /// Step 1: Remove previous build outputs.
 pub fn clean_build_outputs(paths: &Paths) -> StepResult<()> {
-    for rel in [WEB_OUTPUT_REL, SERVER_OUTPUT_REL] {
+    for rel in [WEB_OUTPUT_REL, SERVER_OUTPUT_REL, PACKAGE_STAGING_REL] {
         let path = paths.treiber_dir.join(rel);
         if path.is_dir() {
             fs::remove_dir_all(&path)?;
@@ -75,11 +77,16 @@ pub fn package_artifacts(paths: &Paths) -> StepResult<PathBuf> {
     fs::create_dir_all(&paths.updates_dir)?;
     let archive = paths.updates_dir.join(ARCHIVE_NAME);
     let archive_str = archive.to_str().ok_or("archive path is not valid UTF-8")?;
-    run_command(
-        "tar",
-        &["-czf", archive_str, WEB_OUTPUT_REL, SERVER_OUTPUT_REL],
-        &paths.treiber_dir,
-    )?;
+    // Archive entries must sit under treiber/ to match the update service.
+    let staging = paths.treiber_dir.join(PACKAGE_STAGING_REL);
+    let staged_root = staging.join(ARCHIVE_ROOT);
+    fs::create_dir_all(&staged_root)?;
+    for rel in [WEB_OUTPUT_REL, SERVER_OUTPUT_REL] {
+        let name = Path::new(rel).file_name().ok_or("output path has no name")?;
+        fs::rename(paths.treiber_dir.join(rel), staged_root.join(name))?;
+    }
+    run_command("tar", &["-czf", archive_str, ARCHIVE_ROOT], &staging)?;
+    fs::remove_dir_all(&staging)?;
     Ok(archive)
 }
 

@@ -72,7 +72,8 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/pi/update_service
+WorkingDirectory=/home/pi
+Environment=TREIBER_DIR=/home/pi
 ExecStart=/home/pi/update_service/update_service
 Restart=always
 RestartSec=5

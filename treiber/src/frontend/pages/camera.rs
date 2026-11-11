@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    FahrtInfo, backend::api::toggle_fahrt::{Fahrt, toggle_fahrt}, frontend::{
+    FahrtInfo, backend::api::{livestream::whep_offer, toggle_fahrt::{Fahrt, toggle_fahrt}}, frontend::{
         app::{CURRENT_STATS, FAHRT, WEBSOCKET_CONNECTED}, frondend_data::Theme, settings_pages::settings_camera::SettingsCameraComponent,
     },
 };
@@ -14,6 +14,7 @@ pub fn Camera() -> Element {
         div { 
             class: "grid gap-3",
             
+            LivestreamSection {}
             CameraSettingsSection {}   
             FahrtSection {}
         }
@@ -105,6 +106,97 @@ fn StatBox(title: &'static str, value: String) -> Element {
         div { class: "grid gap-1 rounded-lg border border-border bg-background p-2.5",
             span { class: "text-xs font-bold uppercase tracking-widest text-foreground/60", "{title}" }
             span { class: "text-xl font-semibold", "{value}" }
+        }
+    }
+}
+
+const VIDEO_ID: &str = "livestream-video";
+
+/// Negotiates WHEP: the browser creates the offer, Rust forwards it, and the answer is applied here.
+const WHEP_JS: &str = r#"
+const id = await dioxus.recv();
+const video = document.getElementById(id);
+window.livestreamPc?.close();
+const pc = new RTCPeerConnection();
+window.livestreamPc = pc;
+pc.addTransceiver("video", { direction: "recvonly" });
+pc.ontrack = (e) => {
+    video.muted = true;
+    video.playsInline = true;
+    video.srcObject = e.streams[0];
+    video.play().catch(() => {});
+};
+await pc.setLocalDescription(await pc.createOffer());
+await new Promise((resolve) => {
+    if (pc.iceGatheringState === "complete") return resolve();
+    pc.addEventListener("icegatheringstatechange", () => {
+        if (pc.iceGatheringState === "complete") resolve();
+    });
+});
+dioxus.send(pc.localDescription.sdp);
+const answer = await dioxus.recv();
+await pc.setRemoteDescription({ type: "answer", sdp: answer });
+"#;
+
+const WHEP_STOP_JS: &str = "window.livestreamPc?.close(); window.livestreamPc = null;";
+
+fn start_livestream(mut status: Signal<&'static str>) {
+    spawn(async move {
+        status.set("Verbindung...");
+        let mut eval = document::eval(WHEP_JS);
+        if eval.send(VIDEO_ID).is_err() {
+            status.set("Stream fehlgeschlagen");
+            return;
+        }
+        let Ok(offer) = eval.recv::<String>().await else {
+            status.set("Stream fehlgeschlagen");
+            return;
+        };
+        match whep_offer(offer).await {
+            Ok(answer) => {
+                let _ = eval.send(answer);
+                status.set("");
+            }
+            Err(_) => status.set("Stream fehlgeschlagen"),
+        }
+    });
+}
+
+#[component]
+fn LivestreamSection() -> Element {
+    let connected = WEBSOCKET_CONNECTED();
+    let mut status = use_signal(|| "");
+
+    use_effect(move || {
+        if WEBSOCKET_CONNECTED() {
+            start_livestream(status);
+        } else {
+            document::eval(WHEP_STOP_JS);
+            status.set("");
+        }
+    });
+
+    use_drop(|| {
+        document::eval(WHEP_STOP_JS);
+    });
+
+    rsx! {
+        div { class: "grid gap-3 rounded-2xl border border-border bg-card p-4",
+            div { class: "relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-black",
+                video {
+                    id: VIDEO_ID,
+                    class: "h-full w-full object-cover",
+                }
+                if !connected || !status().is_empty() {
+                    div { class: "absolute inset-0 grid place-items-center text-sm font-bold text-foreground/60",
+                        if connected {
+                            "{status}"
+                        } else {
+                            "Stream nicht verfügbar"
+                        }
+                    }
+                }
+            }
         }
     }
 }
