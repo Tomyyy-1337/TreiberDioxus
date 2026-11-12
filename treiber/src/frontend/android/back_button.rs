@@ -24,7 +24,9 @@ pub fn BackButton() -> Element {
              window.addEventListener('popstate', () => { if (history.state === null) fill(); dioxus.send('back'); });",
         );
         while popstate.recv::<String>().await.is_ok() {
-            if *crate::frontend::components::map::MAP_FULLSCREEN.peek() {
+            if *crate::frontend::components::livestream::LIVESTREAM_FULLSCREEN.peek() {
+                *crate::frontend::components::livestream::LIVESTREAM_FULLSCREEN.write() = false;
+            } else if *crate::frontend::components::map::MAP_FULLSCREEN.peek() {
                 *crate::frontend::components::map::MAP_FULLSCREEN.write() = false;
             } else if nav.can_go_back() {
                 nav.go_back();

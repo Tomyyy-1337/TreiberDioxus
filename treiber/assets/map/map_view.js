@@ -4,7 +4,10 @@ const PMTILES_FILES = ["germany.pmtiles"];
 
 const routeMaps = new Map();
 const interactive = new Set();
+const lastRequests = new Map();
 let librariesPromise = null;
+// Replaced after a failed read, so PMTiles does not keep its failed header cache.
+let pmtilesProtocol = null;
 
 function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -27,6 +30,15 @@ class RangeSource {
     }
 
     async getBytes(offset, length) {
+        try {
+            return await this.fetchBytes(offset, length);
+        } catch (error) {
+            markSourceUnavailable();
+            throw error;
+        }
+    }
+
+    async fetchBytes(offset, length) {
         if (!window.routeMapDirect && window.routeMapRangeRequest) {
             try {
                 return { data: await window.routeMapRangeRequest(this.key, offset, length) };
@@ -51,6 +63,14 @@ class RangeSource {
     }
 }
 
+function createPmtilesProtocol() {
+    const protocol = new window.pmtiles.Protocol();
+    for (const file of PMTILES_FILES) {
+        protocol.add(new window.pmtiles.PMTiles(new RangeSource(file)));
+    }
+    return protocol;
+}
+
 // pmtiles.js is an IIFE that exposes a global `pmtiles`; maplibre-gl.mjs is an ES module.
 function loadLibraries(urls) {
     if (!librariesPromise) {
@@ -63,11 +83,8 @@ function loadLibraries(urls) {
             if (!window.pmtiles) {
                 await loadScript(urls.pmtilesUrl);
             }
-            const protocol = new window.pmtiles.Protocol();
-            for (const file of PMTILES_FILES) {
-                protocol.add(new window.pmtiles.PMTiles(new RangeSource(file)));
-            }
-            maplibre.addProtocol("pmtiles", protocol.tile);
+            maplibre.addProtocol("pmtiles", (params, abort) => pmtilesProtocol.tile(params, abort));
+            pmtilesProtocol = createPmtilesProtocol();
             return { maplibre, style };
         })();
         // Allow a retry if loading failed.
@@ -96,6 +113,7 @@ function routeGeoJson(positions) {
 }
 
 export async function showRoute(id, positions, theme, urls) {
+    lastRequests.set(id, { positions, theme, urls });
     const { maplibre, style } = await loadLibraries(urls);
     if (!document.getElementById(id)) {
         return;
@@ -105,6 +123,7 @@ export async function showRoute(id, positions, theme, urls) {
 
     let entry = routeMaps.get(id);
     if (!entry) {
+        document.getElementById(id)?.querySelector(".route-map-unavailable")?.remove();
         const map = new maplibre.Map({
             container: id,
             style: buildStyle(theme, style),
@@ -131,12 +150,40 @@ export async function showRoute(id, positions, theme, urls) {
     fitRoute(map, positions);
 }
 
+// A failed range read means the PMTiles source is unreachable; every route map shows the notice.
+function markSourceUnavailable() {
+    pmtilesProtocol = createPmtilesProtocol();
+    for (const id of [...routeMaps.keys()]) {
+        showUnavailable(id);
+    }
+}
+
+function showUnavailable(id) {
+    const entry = routeMaps.get(id);
+    if (entry) {
+        entry.map.remove();
+        routeMaps.delete(id);
+    }
+    const container = document.getElementById(id);
+    if (!container || container.querySelector(".route-map-unavailable")) {
+        return;
+    }
+    const box = document.createElement("div");
+    box.className = "route-map-unavailable";
+    box.style.cssText = "display:flex;align-items:center;justify-content:center;height:100%;width:100%;color:#888;font:14px sans-serif;";
+    box.textContent = "Map not available";
+    container.replaceChildren(box);
+}
+
 function showError(id, err) {
     const container = document.getElementById(id);
     if (!container) {
         return;
     }
     console.error("maplibre error", err);
+    if (!routeMaps.has(id)) {
+        return;
+    }
     container.style.position = "relative";
     let box = container.querySelector(".route-map-error");
     if (!box) {
@@ -168,6 +215,15 @@ function applyInteractive(id) {
     }
 }
 
+// Retries a map that showed the unavailable notice; called when the user toggles fullscreen.
+function retryUnavailable(id) {
+    const request = lastRequests.get(id);
+    const box = document.getElementById(id)?.querySelector(".route-map-unavailable");
+    if (request && box) {
+        showRoute(id, request.positions, request.theme, request.urls).catch((err) => console.error("route map retry failed", err));
+    }
+}
+
 export function setInteractive(id, enabled) {
     if (enabled) {
         interactive.add(id);
@@ -176,7 +232,11 @@ export function setInteractive(id, enabled) {
     }
     applyInteractive(id);
     const entry = routeMaps.get(id);
-    if (entry && entry.navShown !== enabled) {
+    if (!entry) {
+        retryUnavailable(id);
+        return;
+    }
+    if (entry.navShown !== enabled) {
         entry.navShown = enabled;
         if (enabled) {
             entry.map.addControl(entry.nav, "top-right");
@@ -184,10 +244,8 @@ export function setInteractive(id, enabled) {
             entry.map.removeControl(entry.nav);
         }
     }
-    if (entry) {
-        entry.map.resize();
-        fitRoute(entry.map, entry.positions ?? []);
-    }
+    entry.map.resize();
+    fitRoute(entry.map, entry.positions ?? []);
 }
 
 export function disposeRoute(id) {

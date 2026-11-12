@@ -26,7 +26,10 @@ pub static CURRENT_STATS: GlobalSignal<CurrentStats> = GlobalSignal::new(|| Curr
 #[component]
 pub fn App() -> Element {
     #[cfg(target_os = "android")]
-    set_status_bar_color();
+    {
+        set_status_bar_color();
+        lock_portrait_orientation();
+    }
 
     let theme = use_storage::<LocalStorage, _>("theme".to_string(), || Theme::Dark);
     let theme = use_context_provider(|| theme);
@@ -105,6 +108,16 @@ fn set_status_bar_color() {
     use_effect(|| {
         if let Err(err) = super::android::status_bar_color::set_status_bar_color(0xFF000000) {
             eprintln!("failed to set status bar colour: {err}");
+        }
+    });
+}
+
+#[cfg(target_os = "android")]
+fn lock_portrait_orientation() {
+    use_effect(|| {
+        let orientation = super::android::orientation::SCREEN_ORIENTATION_PORTRAIT;
+        if let Err(err) = super::android::orientation::set_requested_orientation(orientation) {
+            eprintln!("failed to lock portrait orientation: {err}");
         }
     });
 }

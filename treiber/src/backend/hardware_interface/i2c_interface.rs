@@ -73,6 +73,19 @@ impl I2cInterface {
         .unwrap_or([0u8; N])
     }
 
+    pub async fn read_eeprom_async(&self, register: u16, length: usize) -> Vec<u8> {
+        let device = Arc::clone(&self.device);
+        tokio::task::spawn_blocking(move || {
+            let mut buf = vec![0u8; length];
+            if let Ok(mut device) = device.lock() {
+                let _ = device.write_read(EEPROM_I2C_ADDRESS_MEMORY, &[(register >> 8) as u8, register as u8], &mut buf);
+            }
+            buf
+        })
+        .await
+        .unwrap_or(vec![0u8; length])
+    }  
+
     pub async fn write_eeprom_async(&self, register: u16, data: Vec<u8>) {
         let device = Arc::clone(&self.device);
         tokio::task::spawn_blocking(move || {
@@ -83,12 +96,13 @@ impl I2cInterface {
             let mut write_buffer = [0u8; PAGE_SIZE + 2];
 
             while offset < data.len() {
-                let page_offset = (register as usize + offset) % PAGE_SIZE;
+                let address = register as usize + offset;
+                let page_offset = address % PAGE_SIZE;
                 let page_remaining = PAGE_SIZE - page_offset;
                 let chunk_size = std::cmp::min(page_remaining, data.len() - offset);
-
-                write_buffer[0] = (register >> 8) as u8;
-                write_buffer[1] = register as u8;
+  
+                write_buffer[0] = (address >> 8) as u8;
+                write_buffer[1] = address as u8;
                 write_buffer[2..2 + chunk_size].copy_from_slice(&data[offset..offset + chunk_size]);
 
                 let e = device.write(EEPROM_I2C_ADDRESS_MEMORY, &write_buffer[..2 + chunk_size]);
@@ -97,12 +111,12 @@ impl I2cInterface {
                 }
 
                 offset += chunk_size;
-                std::thread::sleep(std::time::Duration::from_millis(10));
-            }
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }  
         }).await.unwrap();
     }
 }
-
+ 
 #[cfg(not(target_os = "linux"))]
 #[derive(Debug)]
 pub struct I2CError;

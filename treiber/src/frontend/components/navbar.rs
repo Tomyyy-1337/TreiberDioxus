@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::frontend::components::title_bar::TitleBar;
+use crate::frontend::pages::fahrtenbuch::reset_view;
 use crate::frontend::router::Route;
 
 #[component]
@@ -29,6 +30,7 @@ pub fn Navbar() -> Element {
                     active_class: "text-purple-600",
                     class: "z-10 flex h-11 min-w-30 items-center justify-center whitespace-nowrap rounded-xl px-4 text-center text-base font-semibold text-foreground",
                     to: Route::FahrtenbuchPage {},
+                    onclick: move |_| reset_view(),
                     "Fahrtenbuch"
                 }
                 Link {

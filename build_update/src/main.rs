@@ -128,8 +128,8 @@ pub fn verify_integrity(archive: &Path, hash_file: &Path) -> StepResult<bool> {
     Ok(actual.eq_ignore_ascii_case(expected))
 }
 
-fn wait_for_enter() -> StepResult<()> {
-    print!("Press Enter to upload the update to {UPDATE_HOST}...");
+fn wait_for_enter(prompt: &str) -> StepResult<()> {
+    print!("{prompt}");
     io::stdout().flush()?;
     let mut line = String::new();
     io::stdin().read_line(&mut line)?;
@@ -170,6 +170,14 @@ fn wait_for_wifi(ssid: &str) -> StepResult<()> {
         thread::sleep(Duration::from_secs(1));
     }
     Err(format!("could not connect to {ssid}").into())
+}
+
+fn current_wifi() -> StepResult<Option<String>> {
+    let output = run_netsh(&["wlan", "show", "interfaces"])?;
+    let ssid = output.lines().filter_map(|line| line.split_once(':')).find_map(|(key, value)| {
+        (key.trim().to_lowercase() == "ssid" && !value.trim().is_empty()).then(|| value.trim().to_owned())
+    });
+    Ok(ssid)
 }
 
 fn list_known_wifis() -> StepResult<Vec<String>> {
@@ -304,7 +312,8 @@ fn run() -> StepResult<()> {
 
     println!("Update written to {}", archive.display());
 
-    wait_for_enter()?;
+    wait_for_enter(&format!("Press Enter to upload the update to {UPDATE_HOST}..."))?;
+    let original_wifi = current_wifi()?;
     let known = list_known_wifis()?;
     let visible = list_visible_wifis()?;
     let available: Vec<String> = known.into_iter().filter(|name| visible.contains(name)).collect();
@@ -313,9 +322,18 @@ fn run() -> StepResult<()> {
     println!("Connecting to Wi-Fi {ssid}...");
     connect_wifi(&ssid)?;
     println!("Uploading update to {UPDATE_HOST}:{UPDATE_PORT}...");
-    let response = upload_update(&archive, &hash)?;
-    println!("Update service: {response}");
-    Ok(())
+    let result = upload_update(&archive, &hash);
+    match &result {
+        Ok(response) => println!("Update service: {response}"),
+        Err(err) => eprintln!("Upload failed: {err}"),
+    }
+
+    wait_for_enter("Upload finished. Press Enter to reconnect to the original Wi-Fi and exit...")?;
+    if let Some(original) = original_wifi.filter(|name| *name != ssid) {
+        println!("Reconnecting to Wi-Fi {original}...");
+        connect_wifi(&original)?;
+    }
+    result.map(|_| ())
 }
 
 fn main() {

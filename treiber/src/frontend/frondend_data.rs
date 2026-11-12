@@ -23,7 +23,7 @@ pub struct AutoRotate {
     pub enabled: bool,
 }
 
-const MAX_ENTRIES: usize = 50;
+const MAX_ENTRIES: usize = 100;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Fahrtenbuch {

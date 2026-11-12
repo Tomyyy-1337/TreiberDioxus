@@ -2,20 +2,52 @@ use dioxus::prelude::*;
 
 use crate::{FinishedFahrt, frontend::{frondend_data::{Fahrtenbuch, Indexed}, router::Route}};
 
+const PAGE_SIZE: usize = 25;
+const SCROLL_RESTORE_JS: &str = "window.__fahrtActive = true; if (!window.__fahrtScrollBound) { window.__fahrtScrollBound = true; window.addEventListener('scroll', () => { if (window.__fahrtActive) window.__fahrtScrollY = window.scrollY; }, { passive: true }); } requestAnimationFrame(() => window.scrollTo(0, window.__fahrtScrollY ?? 0));";
+
+pub static FAHRTENBUCH_SHOWN: GlobalSignal<usize> = GlobalSignal::new(|| PAGE_SIZE);
+
+/// Resets paging and scroll position, used when the page is opened from the navbar.
+pub fn reset_view() {
+    *FAHRTENBUCH_SHOWN.write() = PAGE_SIZE;
+    document::eval("window.__fahrtScrollY = 0;");
+}
+
 #[component]
 pub fn FahrtenbuchPage() -> Element {
     let fahrtenbuch = use_context::<Signal<Fahrtenbuch>>();
-    let entries = fahrtenbuch();
+    let entries = fahrtenbuch.read();
+    let shown_count = *FAHRTENBUCH_SHOWN.read();
+
+    use_effect(|| {
+        document::eval(SCROLL_RESTORE_JS);
+    });
+
+    use_drop(|| {
+        document::eval("window.__fahrtActive = false;");
+    });
 
     // Newest first, grouped by consecutive entries sharing a year and month.
-    let mut months: Vec<((u16, u8), String, Vec<&Indexed<FinishedFahrt>>)> = Vec::new();
-    for entry in entries.entries.iter().rev() {
+    let mut months: Vec<((u16, u8), String, usize, Vec<&Indexed<FinishedFahrt>>)> = Vec::new();
+    for (position, entry) in entries.entries.iter().rev().enumerate() {
         let key = entry.value.client_start_time.year_month();
+        let visible = position < shown_count;
         match months.last_mut() {
-            Some((last_key, _, list)) if *last_key == key => list.push(entry),
-            _ => months.push((key, entry.value.client_start_time.month_label(), vec![entry])),
+            Some((last_key, _, count, list)) if *last_key == key => {
+                *count += 1;
+                if visible {
+                    list.push(entry);
+                }
+            }
+            _ => months.push((
+                key,
+                entry.value.client_start_time.month_label(),
+                1,
+                if visible { vec![entry] } else { Vec::new() },
+            )),
         }
     }
+    months.retain(|(_, _, _, list)| !list.is_empty());
 
     let trip_count = entries.entries.len();
     let total_km = if trip_count == 0 {
@@ -50,7 +82,7 @@ pub fn FahrtenbuchPage() -> Element {
                     "Noch keine Fahrten"
                 }
             }
-            for (_, label, list) in months.iter() {
+            for (_, label, count, list) in months.iter() {
                 section {
                     class: "grid gap-3",
                     div {
@@ -61,7 +93,7 @@ pub fn FahrtenbuchPage() -> Element {
                         }
                         span {
                             class: "text-xs tabular-nums text-muted-foreground",
-                            "{list.len()} Fahrten"
+                            "{count} Fahrten"
                         }
                     }
                     for Indexed{index, value} in list.iter() {
@@ -92,6 +124,13 @@ pub fn FahrtenbuchPage() -> Element {
                             }
                         }
                     }
+                }
+            }
+            if shown_count < entries.entries.len() {
+                button {
+                    class: "mx-auto rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium",
+                    onclick: move |_| *FAHRTENBUCH_SHOWN.write() += PAGE_SIZE,
+                    "Mehr anzeigen"
                 }
             }
         }
