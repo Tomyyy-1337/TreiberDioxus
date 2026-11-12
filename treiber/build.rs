@@ -24,6 +24,7 @@ fn download_public_assets() -> Result<(), Box<dyn std::error::Error>> {
             .filter(|filename| !filename.is_empty())
             .ok_or_else(|| format!("asset URL has no filename: {url}"))?;
         let asset_path = public_dir.join(filename);
+        println!("cargo:rerun-if-changed={}", asset_path.display());
         if !asset_path.exists() {
             println!("cargo:warning=Downloading {filename} from {url}");
             let response = reqwest::blocking::get(*url)?.error_for_status()?;

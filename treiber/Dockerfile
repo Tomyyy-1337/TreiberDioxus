@@ -34,7 +34,7 @@ ARG CARGO_PROFILE_RELEASE_OPT_LEVEL
 ARG CARGO_PROFILE_RELEASE_DEBUG
 ARG CARGO_PROFILE_RELEASE_PANIC
 ARG CARGO_PROFILE_RELEASE_STRIP
-ARG CARGO_PROFILE_RELEASE_INCREMENTAL
+ARG CARGO_PROFILE_RELEASE_INCREMENTAL=true
 ARG CARGO_PROFILE_RELEASE_LTO
 ARG CARGO_PROFILE_RELEASE_CODEGEN_UNITS
 
@@ -42,6 +42,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/app/target \
     --mount=type=cache,target=/root/.cache \
+    --mount=type=cache,target=/root/.local/share/.dx \
     --mount=type=cache,target=/root/.local/share/dioxus \
     rm -rf /app/target/dx/ruder_cam_beta/release/web && \
     dx bundle --release --web @server --server --target aarch64-unknown-linux-gnu && \

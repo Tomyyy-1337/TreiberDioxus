@@ -70,7 +70,7 @@ pub fn start_server() {
                 .layer(Extension(current_stats_receiver));
 
             let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-            
+          
             axum::serve(listener, router).await.unwrap()
         });
 }

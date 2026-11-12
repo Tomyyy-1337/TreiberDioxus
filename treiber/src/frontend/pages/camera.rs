@@ -8,8 +8,6 @@ use crate::{
 
 #[component]
 pub fn Camera() -> Element {
-    let mut theme = use_context::<Signal<Theme>>();
-
     rsx! {
         div { 
             class: "grid gap-3",

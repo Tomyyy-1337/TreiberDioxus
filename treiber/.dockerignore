@@ -1,3 +1,7 @@
 target
 .git
 maps
+assets/map/maplibre-gl.mjs
+assets/map/maplibre-gl.css
+assets/map/maplibre-gl-worker.mjs
+assets/map/pmtiles.js
