@@ -1,3 +1,4 @@
+use dioxus::stores::index;
 use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, fmt::Display};
 
@@ -50,10 +51,94 @@ impl Fahrtenbuch {
             self.entries.pop_front();
         }
     }
+
+    pub fn remove_entry(&mut self, index: usize) {
+        self.entries.retain(|entry| entry.index != index);
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Indexed<T> {
     pub index: usize,
     pub value: T,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Copy)]
+pub enum OverlayElementTypes {
+    CurrentSpeed,
+    CurrentBPM,
+    SessionDistance,
+    SessionTime   
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Copy)]
+pub struct OverlayElement {
+    pub element_type: OverlayElementTypes,
+    pub visible: bool,
+}
+
+impl OverlayElement {
+    pub fn new(element_type: OverlayElementTypes, visible: bool) -> Self {
+        OverlayElement {
+            element_type,
+            visible
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum OverlayPosition {
+    Top,
+    Bottom
+}
+
+pub struct OverlaySettings {
+    show_overlay: bool,
+    overlay_position: OverlayPosition,
+    elements: [OverlayElement; 4],
+}
+
+impl OverlaySettings {
+    pub fn new() -> Self {
+        OverlaySettings {
+            show_overlay: true,
+            overlay_position: OverlayPosition::Top,
+            elements: [
+                OverlayElement::new(OverlayElementTypes::CurrentSpeed, true),
+                OverlayElement::new(OverlayElementTypes::CurrentBPM, true),
+                OverlayElement::new(OverlayElementTypes::SessionDistance, true),
+                OverlayElement::new(OverlayElementTypes::SessionTime, true),
+            ],
+        }
+    }
+
+    pub fn set_element_visibility(&mut self, index: usize, visible: bool) {
+        if let Some(element) = self.elements.get_mut(index) {
+            element.visible = visible;
+        }
+    }
+
+    pub fn set_position(&mut self, index: usize, new_index: usize) {
+        if index < self.elements.len() && new_index < self.elements.len() && index != new_index {
+            let tmp = self.elements[index];
+            self.elements[index] = self.elements[new_index];
+            self.elements[new_index] = tmp;
+        }
+    }
+
+    pub fn set_show_overlay(&mut self, show: bool) {
+        self.show_overlay = show;
+    }
+    
+    pub fn get_show_overlay(&self) -> bool {
+        self.show_overlay
+    }
+
+    pub fn get_overlay_position(&self) -> OverlayPosition {
+        self.overlay_position
+    }
+
+    pub fn get_visible_elements(&self) -> impl Iterator<Item = &OverlayElementTypes> {
+        self.elements.iter().filter(|e| e.visible).map(|e| &e.element_type)
+    }
 }

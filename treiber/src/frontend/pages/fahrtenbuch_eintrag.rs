@@ -4,7 +4,9 @@ use crate::{frontend::{components::map::RouteMap, frondend_data::{Fahrtenbuch, I
 
 #[component]
 pub fn FahrtenbuchEintrag(index: usize) -> Element {
-    let fahrtenbuch = use_context::<Signal<Fahrtenbuch>>();
+    let mut fahrtenbuch = use_context::<Signal<Fahrtenbuch>>();
+    let navigator = use_navigator();
+    let mut confirm_delete = use_signal(|| false);
 
     let eintrag = fahrtenbuch().entries.iter().find(|Indexed{index: i, ..}| *i == index).cloned();
 
@@ -16,7 +18,7 @@ pub fn FahrtenbuchEintrag(index: usize) -> Element {
 
         rsx!(
             div {
-                class: "grid w-full gap-6 py-4",
+                class: "grid w-full gap-3 py-2",
                 div {
                     class: "flex items-start justify-between gap-4",
                     header {
@@ -39,7 +41,7 @@ pub fn FahrtenbuchEintrag(index: usize) -> Element {
                 div { class: "border-t border-border", aria_hidden: "true" }
 
                 div {
-                    class: "grid gap-4",
+                    class: "grid gap-2",
                     div {
                         class: "h-80 w-full",
                         if value.gps_history.len() >= 2 {
@@ -51,7 +53,6 @@ pub fn FahrtenbuchEintrag(index: usize) -> Element {
                             }
                         }
                     }
-                    
                     div {
                         class: "flex items-baseline justify-between rounded-2xl border border-border bg-card px-4 py-3",
                         span { class: "text-xs uppercase tracking-wide text-muted-foreground", "Gesamtstrecke" }
@@ -59,12 +60,24 @@ pub fn FahrtenbuchEintrag(index: usize) -> Element {
                     }
 
                     div {
-                        class: "grid grid-cols-2 gap-4",
+                        class: "grid grid-cols-2 gap-2",
                         StatCard { label: "Zeit", value: value.active_time_string() }
                         StatCard { label: "Schläge", value: value.schlag_count.to_string() }
                         StatCard { label: "Ø Schlagzahl", value: format!("{schlagzahl:.1} /min") }
                         StatCard { label: "Ø Geschwindigkeit", value: format!("{speed:.1} km/h") }
                     }
+                }
+                button {
+                    class: "w-full rounded-2xl border border-destructive bg-card px-4 py-4 text-base font-semibold text-destructive",
+                    onclick: move |_| {
+                        if confirm_delete() {
+                            fahrtenbuch.write().remove_entry(index);
+                            navigator.push(Route::FahrtenbuchPage {});
+                        } else {
+                            confirm_delete.set(true);
+                        }
+                    },
+                    if confirm_delete() { "Löschen bestätigen" } else { "Eintrag löschen" }
                 }
             }
         )

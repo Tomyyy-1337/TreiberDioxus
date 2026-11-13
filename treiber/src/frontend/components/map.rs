@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use dioxus::prelude::*;
 
 use crate::GpsPosition;
+use crate::frontend::components::double_tap::register_tap;
 use crate::frontend::frondend_data::Theme;
 
 static MAP_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -59,6 +60,8 @@ pub fn RouteMap(positions: ReadSignal<Vec<GpsPosition>>) -> Element {
 
     let icon_path = if is_full { "M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" } else { "M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" };
     let title = if is_full { "Exit fullscreen" } else { "Fullscreen" };
+    let last_tap = use_signal(|| None::<i64>);
+    let tap_hint = use_signal(|| false);
     rsx! {
         document::Link { rel: "stylesheet", href: MAP_CSS }
         div {
@@ -67,9 +70,19 @@ pub fn RouteMap(positions: ReadSignal<Vec<GpsPosition>>) -> Element {
             } else {
                 "relative h-full w-full overflow-hidden rounded-2xl border border-border"
             },
+            onclick: move |_| {
+                if !*MAP_FULLSCREEN.peek() && register_tap(last_tap, tap_hint) {
+                    *MAP_FULLSCREEN.write() = true;
+                }
+            },
             div {
                 id: "{id}",
                 class: "h-full w-full",
+            }
+            if tap_hint() {
+                div { class: "pointer-events-none absolute bottom-12 left-1/2 z-20 -translate-x-1/2 rounded-lg bg-black/70 px-3 py-1 text-sm text-white",
+                    "Tap again for fullscreen"
+                }
             }
             div {
                 class: "maplibregl-ctrl maplibregl-ctrl-group",
@@ -77,7 +90,8 @@ pub fn RouteMap(positions: ReadSignal<Vec<GpsPosition>>) -> Element {
                 button {
                     title: "{title}",
                     style: "display: flex; align-items: center; justify-content: center; width: 29px; height: 29px; padding: 0; color: #333;",
-                    onclick: move |_| {
+                    onclick: move |evt| {
+                        evt.stop_propagation();
                         *MAP_FULLSCREEN.write() = !is_full;
                     },
                     svg {

@@ -1,8 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    FocusMode, backend::api::livestream::whep_offer,
-    frontend::app::{SETTINGS_CAMERA, WEBSOCKET_CONNECTED},
+    FocusMode, backend::api::livestream::whep_offer, frontend::{app::{OVERLAY_SETTINGS, SETTINGS_CAMERA, WEBSOCKET_CONNECTED}, components::{double_tap::register_tap, fullscreen_overlay::FullscreenOverlay}, frondend_data::OverlayPosition},
 };
 
 const VIDEO_ID: &str = "livestream-video";
@@ -159,6 +158,13 @@ pub fn LivestreamSection() -> Element {
     let mut generation = use_signal(|| 0u32);
     // Last (connected, focal_length, hdr_enabled, focus_mode) the stream was started with.
     let mut applied = use_signal(|| None::<(bool, u8, bool, FocusMode)>);
+    let last_tap = use_signal(|| None::<i64>);
+    let tap_hint = use_signal(|| false);
+    let fullscreen_button_class = {
+        let overlay_at_bottom = OVERLAY_SETTINGS.read().get_show_overlay()
+            && OVERLAY_SETTINGS.read().get_overlay_position() == OverlayPosition::Bottom;
+        if overlay_at_bottom { "absolute top-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-lg bg-black/60 text-white" } else { "absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-lg bg-black/60 text-white" }
+    };
 
     use_effect(move || {
         let settings = SETTINGS_CAMERA();
@@ -208,10 +214,18 @@ pub fn LivestreamSection() -> Element {
                 } else {
                     "relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-black"
                 },
+                onclick: move |_| {
+                    if !*LIVESTREAM_FULLSCREEN.peek() && register_tap(last_tap, tap_hint) {
+                        *LIVESTREAM_FULLSCREEN.write() = true;
+                    }
+                },
                 video {
                     id: VIDEO_ID,
                     class: "h-full w-full object-contain bg-black",
                     controls: false,
+                }
+                if LIVESTREAM_FULLSCREEN() && OVERLAY_SETTINGS.read().get_show_overlay() {
+                    FullscreenOverlay {}
                 }
                 if !connected || !status().is_empty() {
                     div { class: "absolute inset-0 grid place-items-center bg-black text-sm font-bold text-foreground/60",
@@ -222,11 +236,17 @@ pub fn LivestreamSection() -> Element {
                         }
                     }
                 }
+                if tap_hint() {
+                    div { class: "pointer-events-none absolute bottom-12 left-1/2 z-20 -translate-x-1/2 rounded-lg bg-black/70 px-3 py-1 text-sm text-white",
+                        "Tap again for fullscreen"
+                    }
+                }
                 // Rendered last so it stays above the status overlay.
                 button {
-                    class: "absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-lg bg-black/60 text-white",
+                    class: fullscreen_button_class,
                     aria_label: "Vollbild",
-                    onclick: move |_| {
+                    onclick: move |evt| {
+                        evt.stop_propagation();
                         let fullscreen = *LIVESTREAM_FULLSCREEN.peek();
                         *LIVESTREAM_FULLSCREEN.write() = !fullscreen;
                     },

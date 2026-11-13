@@ -22,6 +22,7 @@ pub static WEBSOCKET_CONNECTED: GlobalSignal<bool> = GlobalSignal::new(|| false)
 pub static SETTINGS_CAMERA: GlobalSignal<CameraInterface> = GlobalSignal::new(|| CameraInterface::new());
 pub static FAHRT: GlobalSignal<Option<FahrtInfo>> = GlobalSignal::new(|| None);
 pub static CURRENT_STATS: GlobalSignal<CurrentStats> = GlobalSignal::new(|| CurrentStats { bpm: 0.0, velocity: 0.0 });
+pub static OVERLAY_SETTINGS: GlobalSignal<OverlaySettings> = GlobalSignal::new(|| OverlaySettings::new());
 
 #[component]
 pub fn App() -> Element {
