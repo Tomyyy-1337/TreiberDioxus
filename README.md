@@ -121,12 +121,6 @@ sudo systemctl enable backend.service
 sudo systemctl start backend.service
 ```
 
-
-
-
-
-
-
 ## Optimize boot (after first treiber run)
 ```bash
 sudo systemctl disable --now bluetooth.service

@@ -133,6 +133,7 @@ try {
 "#;
 
 /// Installs `window.routeMapRangeRequest` and answers requests coming from Rust.
+#[cfg(target_os = "android")]
 const RANGE_BRIDGE_JS: &str = r#"
 const pendingRanges = new Map();
 let nextRangeId = 0;

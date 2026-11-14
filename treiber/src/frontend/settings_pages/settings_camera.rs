@@ -26,11 +26,9 @@ pub fn SettingsCameraComponent() -> Element {
                 class: "grid gap-3 grid-cols-2",
 
                 FocalLength {}
-                MeteringMode {}
                 FocusModeSettings {}
                 BitrateSettings {}
                 HdrSettings {}
-                AutoLevelSettings {}
                 ExposureSettings {}
             }
         }
@@ -143,31 +141,6 @@ pub fn FocalLength() -> Element {
 }
 
 #[component]
-pub fn MeteringMode() -> Element {
-    static METERING_OPTIONS: [(Metering, &str); 2] = [
-        (Metering::Average, "Durchschnitt"),
-        (Metering::Center, "Mittenbetont"),
-    ];
-
-    let selected = use_memo(move ||
-        SETTINGS_CAMERA().metering_mode
-    );
-
-    rsx! {
-        SelectWidget::<Metering> {
-            title: "Messung",
-            options: &METERING_OPTIONS,
-            selected: selected(),
-            onchange: move |metering_mode: Metering| {
-                spawn(async move {
-                    let _ = set_metering_mode(metering_mode).await;
-                });
-            },
-        }
-    }
-}
-
-#[component]
 pub fn FocusModeSettings() -> Element {
     static FOCUS_MODE_OPTIONS: [(FocusMode, &str); 2] = [
         (FocusMode::Auto, "Auto"),
@@ -236,19 +209,6 @@ pub fn HdrSettings() -> Element {
                 });
                 SETTINGS_CAMERA.write().hdr_enabled = !hdr_enabled();
             },
-        }
-    }
-}
-
-#[component]
-pub fn AutoLevelSettings() -> Element {
-    let mut auto_rotate = use_context::<Signal<AutoRotate>>();
-
-    rsx! {
-        CheckboxWidget {
-            title: "Auto Level",
-            checked: auto_rotate().enabled,
-            onchange: move |_| auto_rotate.with_mut(|auto_rotate| auto_rotate.enabled = !auto_rotate.enabled),
         }
     }
 }

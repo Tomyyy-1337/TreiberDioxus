@@ -1,9 +1,11 @@
 use dioxus::prelude::*;
 
-use crate::{CurrentStats, frontend::{app::{CURRENT_STATS, FAHRT, OVERLAY_SETTINGS}, frondend_data::{OverlayElementTypes, OverlayPosition}, icons::{battery_indicator::BatteryIndicator, fahrt_status_indicator::FahrtStatusIndicator, gps_indicator::GpsIndicator}}};
+use crate::{CurrentStats, frontend::{app::{CURRENT_STATS, FAHRT}, frondend_data::{OverlayElementTypes, OverlayPosition, OverlaySettings}, icons::{battery_indicator::BatteryIndicator, fahrt_status_indicator::FahrtStatusIndicator, gps_indicator::GpsIndicator}}};
 
 #[component]
 pub fn FullscreenOverlay() -> Element {
+    let overlay_settings = use_context::<Signal<OverlaySettings>>();
+
     let CurrentStats{ bpm, velocity} = *CURRENT_STATS.read();
 
     let fahrt= *FAHRT.read();
@@ -16,19 +18,34 @@ pub fn FullscreenOverlay() -> Element {
         "--:--".to_string()
     };
 
-    let position_class = match OVERLAY_SETTINGS.read().get_overlay_position() {
+    let position_class = match overlay_settings.read().get_overlay_position() {
         OverlayPosition::Top => "top-0",
         OverlayPosition::Bottom => "bottom-0",
     };
 
-    let stats: Vec<(&str, String, &str)> = OVERLAY_SETTINGS
+    let split_500m = if velocity > 0.0 {
+        500.0 / velocity
+    } else {
+        0.0
+    };
+
+    let distance_per_stroke = if bpm > 0.0 {
+        velocity / (bpm / 60.0)
+    } else {
+        0.0
+    };
+
+    let stats: Vec<(&str, String, &str)> = overlay_settings
         .read()
         .get_visible_elements()
         .map(|element| match element {
-            OverlayElementTypes::CurrentSpeed => ("Current Speed", format!("{:.1}", velocity), "km/h"),
-            OverlayElementTypes::CurrentBPM => ("Current BPM", format!("{:.1}", bpm), "bpm"),
-            OverlayElementTypes::SessionDistance => ("Session Distance", distance_traveled.to_owned(), "km"),
-            OverlayElementTypes::SessionTime => ("Session Time", format!("{formated_active_time}"), ""),
+            OverlayElementTypes::CurrentSpeed => ("Geschwindigkeit", format!("{:.1}", velocity), "km/h"),
+            OverlayElementTypes::CurrentBPM => ("Schlagzahl", format!("{:.1}", bpm), "bpm"),
+            OverlayElementTypes::SessionDistance => ("Distanz", distance_traveled.to_owned(), "km"),
+            OverlayElementTypes::SessionTime => ("Zeit", format!("{formated_active_time}"), ""),
+            OverlayElementTypes::Split500m => ("500m Split", format!("{:02}:{:02}", (split_500m / 60.0) as u64, (split_500m % 60.0) as u64), ""),
+            OverlayElementTypes::DistancePerStroke => ("Distanz/Schlag", format!("{:.1}", distance_per_stroke), "m"),
+            OverlayElementTypes::FahrtSchlagCount => ("Schläge", fahrt.map_or("-.-".to_string(), |f| format!("{}", f.schlag_count)), ""),
         })
         .collect();
 

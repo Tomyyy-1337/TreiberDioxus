@@ -65,5 +65,5 @@ pub async fn websocket_handler(options: WebSocketOptions) -> Result<Websocket<()
                 break;
             }
         }
-    }))   
+    })) 
 }

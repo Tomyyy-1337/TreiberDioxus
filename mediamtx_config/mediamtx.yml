@@ -730,7 +730,7 @@ pathDefaults:
   # Examples: 0 moves the lens to infinity.
   #           0.5 moves the lens to focus on objects 2m away.
   #           2 moves the lens to focus on objects 50cm away.
-  rpiCameraLensPosition: 1.0
+  rpiCameraLensPosition: 0.5
   # Autofocus window, in the form x,y,width,height where the coordinates
   # are given as a proportion of the entire image.
   rpiCameraAfWindow:

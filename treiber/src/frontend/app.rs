@@ -22,7 +22,6 @@ pub static WEBSOCKET_CONNECTED: GlobalSignal<bool> = GlobalSignal::new(|| false)
 pub static SETTINGS_CAMERA: GlobalSignal<CameraInterface> = GlobalSignal::new(|| CameraInterface::new());
 pub static FAHRT: GlobalSignal<Option<FahrtInfo>> = GlobalSignal::new(|| None);
 pub static CURRENT_STATS: GlobalSignal<CurrentStats> = GlobalSignal::new(|| CurrentStats { bpm: 0.0, velocity: 0.0 });
-pub static OVERLAY_SETTINGS: GlobalSignal<OverlaySettings> = GlobalSignal::new(|| OverlaySettings::new());
 
 #[component]
 pub fn App() -> Element {
@@ -34,6 +33,9 @@ pub fn App() -> Element {
 
     let theme = use_storage::<LocalStorage, _>("theme".to_string(), || Theme::Dark);
     let theme = use_context_provider(|| theme);
+
+    let overlay_settings = use_storage::<LocalStorage, _>("overlay_settings".to_string(), || OverlaySettings::new());
+    use_context_provider(|| overlay_settings);
 
     let fahrtenbuch = use_storage::<LocalStorage, _>("fahrtenbuch".to_string(), || Fahrtenbuch::new());
     let fahrtenbuch = use_context_provider(|| fahrtenbuch);

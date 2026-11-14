@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    FocusMode, backend::api::livestream::whep_offer, frontend::{app::{OVERLAY_SETTINGS, SETTINGS_CAMERA, WEBSOCKET_CONNECTED}, components::{double_tap::register_tap, fullscreen_overlay::FullscreenOverlay}, frondend_data::OverlayPosition},
+    FocusMode, backend::api::livestream::whep_offer, frontend::{app::{SETTINGS_CAMERA, WEBSOCKET_CONNECTED}, components::{double_tap::register_tap, fullscreen_overlay::FullscreenOverlay}, frondend_data::{OverlayPosition, OverlaySettings}},
 };
 
 const VIDEO_ID: &str = "livestream-video";
@@ -152,6 +152,8 @@ fn start_livestream(mut status: Signal<&'static str>, generation: Signal<u32>, m
 
 #[component]
 pub fn LivestreamSection() -> Element {
+    let overlay_settings = use_context::<Signal<OverlaySettings>>();
+
     let connected = WEBSOCKET_CONNECTED();
     let mut status = use_signal(|| "");
     // Each start or stop bumps this so older reconnect loops exit.
@@ -161,8 +163,8 @@ pub fn LivestreamSection() -> Element {
     let last_tap = use_signal(|| None::<i64>);
     let tap_hint = use_signal(|| false);
     let fullscreen_button_class = {
-        let overlay_at_bottom = OVERLAY_SETTINGS.read().get_show_overlay()
-            && OVERLAY_SETTINGS.read().get_overlay_position() == OverlayPosition::Bottom;
+        let overlay_at_bottom = overlay_settings.read().get_show_overlay()
+            && overlay_settings.read().get_overlay_position() == OverlayPosition::Bottom;
         if overlay_at_bottom { "absolute top-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-lg bg-black/60 text-white" } else { "absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-lg bg-black/60 text-white" }
     };
 
@@ -224,7 +226,7 @@ pub fn LivestreamSection() -> Element {
                     class: "h-full w-full object-contain bg-black",
                     controls: false,
                 }
-                if LIVESTREAM_FULLSCREEN() && OVERLAY_SETTINGS.read().get_show_overlay() {
+                if LIVESTREAM_FULLSCREEN() && overlay_settings.read().get_show_overlay() {
                     FullscreenOverlay {}
                 }
                 if !connected || !status().is_empty() {

@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 
 use crate::{
-    FahrtInfo, backend::api::toggle_fahrt::{Fahrt, toggle_fahrt}, frontend::{
-        app::{CURRENT_STATS, FAHRT, WEBSOCKET_CONNECTED}, components::livestream::LivestreamSection, frondend_data::Theme, settings_pages::settings_camera::SettingsCameraComponent,
+    FahrtInfo, backend::api::toggle_fahrt::{toggle_fahrt}, frontend::{
+        app::{CURRENT_STATS, FAHRT, WEBSOCKET_CONNECTED}, components::livestream::LivestreamSection, settings_pages::settings_camera::SettingsCameraComponent,
     },
 };
 
